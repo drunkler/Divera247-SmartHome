@@ -162,6 +162,11 @@ def poll_divera():
             cfg_module.save(cfg)
 
             _trigger_lights(latest, cfg)
+        elif latest_id:
+            # Einsatz bereits bekannt – nach Neustart State wiederherstellen ohne Lichter zu schalten
+            if state["last_alarm"] is None:
+                log.info("Bekannter Einsatz nach Neustart wiederhergestellt: %s (ID %s)", latest.get("title", "?"), latest_id)
+                state["last_alarm"] = latest
 
     except Exception as e:
         state["poll_error"] = str(e)
