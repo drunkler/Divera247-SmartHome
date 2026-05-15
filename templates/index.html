@@ -3,135 +3,176 @@
 
 <!-- Status-Leiste -->
 <div class="row g-3 mb-4">
-  <div class="col-md-4">
-    <div class="card h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <span class="status-dot {% if state.lights_on %}dot-green{% else %}dot-grey{% endif %}" style="width:18px;height:18px;"></span>
-        <div>
-          <div class="fw-bold">Lichter</div>
-          <div class="text-muted small">
-            {% if state.lights_on %}An seit {{ state.lights_on_since }}{% else %}Aus{% endif %}
-          </div>
+  <div class="col-sm-4">
+    <div class="status-card">
+      <div class="status-icon {% if state.lights_on %}green{% else %}grey{% endif %}">
+        <i class="bi bi-lightbulb{% if state.lights_on %}-fill{% endif %}"></i>
+      </div>
+      <div>
+        <div class="status-label">Lichter</div>
+        <div class="status-value">
+          {% if state.lights_on %}
+            <span style="color:var(--green)">An</span> seit {{ state.lights_on_since }}
+          {% else %}
+            Aus
+          {% endif %}
+        </div>
+      </div>
+      {% if state.lights_on %}
+        <div class="pulse-wrap ms-auto">
+          <div class="pulse-dot green"></div>
+          <div class="pulse-ring green"></div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-sm-4">
+    <div class="status-card">
+      <div class="status-icon {% if cfg.divera_access_key and not state.poll_error %}green{% elif state.poll_error %}red{% else %}grey{% endif %}">
+        <i class="bi bi-broadcast"></i>
+      </div>
+      <div>
+        <div class="status-label">Divera API</div>
+        <div class="status-value">
+          {% if not cfg.divera_access_key %}
+            Kein API-Key
+          {% elif state.poll_error %}
+            <span style="color:var(--red)">{{ state.poll_error[:45] }}</span>
+          {% else %}
+            <span style="color:var(--green)">Verbunden</span>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
-  <div class="col-md-4">
-    <div class="card h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <span class="status-dot {% if cfg.divera_access_key %}dot-green{% else %}dot-red{% endif %}" style="width:18px;height:18px;"></span>
-        <div>
-          <div class="fw-bold">Divera API</div>
-          <div class="text-muted small">
-            {% if cfg.divera_access_key %}
-              {% if state.poll_error %}<span class="text-danger">Fehler: {{ state.poll_error[:40] }}</span>
-              {% else %}Verbunden{% endif %}
-            {% else %}Kein API-Key konfiguriert{% endif %}
-          </div>
-        </div>
+
+  <div class="col-sm-4">
+    <div class="status-card">
+      <div class="status-icon blue">
+        <i class="bi bi-clock"></i>
       </div>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <i class="bi bi-clock fs-4 text-secondary"></i>
-        <div>
-          <div class="fw-bold">Abfrageintervall</div>
-          <div class="text-muted small">alle {{ cfg.poll_interval }} Sekunden</div>
-        </div>
+      <div>
+        <div class="status-label">Polling</div>
+        <div class="status-value">alle {{ cfg.poll_interval }} Sekunden</div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Aktiver Einsatz Banner -->
+{% if state.last_alarm %}
+<div class="alarm-banner p-3 mb-4">
+  <div class="d-flex align-items-start gap-3">
+    <div style="font-size:2rem;line-height:1">🚨</div>
+    <div class="flex-grow-1">
+      <div class="alarm-badge"><i class="bi bi-exclamation-triangle-fill"></i> Letzter Einsatz</div>
+      <div class="alarm-title">{{ state.last_alarm.get('title', '—') }}</div>
+      {% if state.last_alarm.get('text') %}
+        <div class="alarm-meta mb-1">{{ state.last_alarm.get('text') }}</div>
+      {% endif %}
+      {% if state.last_alarm.get('address') %}
+        <div class="alarm-meta"><i class="bi bi-geo-alt"></i> {{ state.last_alarm.get('address') }}</div>
+      {% endif %}
+    </div>
+    <div class="text-end">
+      <a href="/lights/on"  class="btn btn-on  btn-sm mb-1 d-block"><i class="bi bi-power"></i> Alle AN</a>
+      <a href="/lights/off" class="btn btn-off btn-sm d-block"><i class="bi bi-power"></i> Alle AUS</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-4">
-  <!-- Lichtauswahl -->
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header fw-bold"><i class="bi bi-lightbulb-fill text-warning"></i> Lichter bei Einsatz einschalten</div>
+  <!-- Lichter bei Einsatz -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-lightbulb-fill text-warning"></i> Lichter bei Einsatz
+      </div>
       <div class="card-body">
         {% if devices %}
           <form method="post" action="/lights/select">
-            <p class="text-muted small mb-3">Wähle aus, welche Lichter bei einem neuen Einsatz automatisch angehen:</p>
+            <p class="text-muted small mb-3">Welche Geräte sollen bei einem Einsatz eingeschaltet werden?</p>
             {% for dev in devices %}
-              <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="lights" value="{{ dev.id }}"
-                       id="dev_{{ dev.id }}" {% if dev.id in selected %}checked{% endif %}>
-                <label class="form-check-label d-flex align-items-center gap-2" for="dev_{{ dev.id }}">
-                  <i class="bi bi-plug text-secondary"></i>
-                  <strong>{{ dev.name }}</strong>
-                  <span class="text-muted small">({{ dev.ip }} · Kanal {{ dev.channel }} · {{ dev.type }})</span>
-                </label>
-              </div>
+              <label class="device-check {% if dev.id in selected %}checked{% endif %}" id="lbl_{{ dev.id }}">
+                <input type="checkbox" name="lights" value="{{ dev.id }}"
+                       {% if dev.id in selected %}checked{% endif %}
+                       onchange="toggleCheck(this)">
+                <div>
+                  <div class="device-name">{{ dev.name }}</div>
+                  <div class="device-meta">{{ dev.ip }} · Kanal {{ dev.channel }} · {{ dev.model or dev.type }}</div>
+                </div>
+              </label>
             {% endfor %}
-            <div class="mt-3 d-flex gap-2">
-              <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Auswahl speichern</button>
-            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2 px-3">
+              <i class="bi bi-save"></i> Auswahl speichern
+            </button>
           </form>
         {% else %}
-          <p class="text-muted">Noch keine Shelly-Geräte konfiguriert. <a href="/devices">Jetzt hinzufügen →</a></p>
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-plug" style="font-size:2rem;opacity:.3"></i>
+            <p class="mt-2 mb-1">Noch keine Geräte konfiguriert.</p>
+            <a href="/devices" class="btn btn-outline-secondary btn-sm">Geräte hinzufügen →</a>
+          </div>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Manuell & letzter Einsatz -->
-  <div class="col-lg-6">
-    <div class="card mb-4">
-      <div class="card-header fw-bold"><i class="bi bi-toggles"></i> Manuelle Steuerung</div>
+  <!-- Rechte Spalte -->
+  <div class="col-lg-5 d-flex flex-column gap-4">
+
+    <!-- Manuelle Steuerung -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-toggles"></i> Manuelle Steuerung</div>
       <div class="card-body d-flex gap-2">
-        <a href="/lights/on" class="btn btn-success"><i class="bi bi-power"></i> Alle AN</a>
-        <a href="/lights/off" class="btn btn-danger"><i class="bi bi-power"></i> Alle AUS</a>
+        <a href="/lights/on"  class="btn btn-on  flex-fill py-2"><i class="bi bi-power"></i> Alle AN</a>
+        <a href="/lights/off" class="btn btn-off flex-fill py-2"><i class="bi bi-power"></i> Alle AUS</a>
       </div>
     </div>
 
-    {% if state.last_alarm %}
-      <div class="card alarm-card">
-        <div class="card-header fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Letzter Einsatz</div>
-        <div class="card-body">
-          <div class="fw-bold fs-5">{{ state.last_alarm.get('title', '—') }}</div>
-          <div class="text-muted small mb-1">{{ state.last_alarm.get('text', '') }}</div>
-          <div class="text-muted small">
-            <i class="bi bi-geo-alt"></i> {{ state.last_alarm.get('address', '—') }}
-          </div>
-        </div>
+    <!-- Einsatz-Verlauf -->
+    {% if state.alarm_history %}
+    <div class="card flex-grow-1">
+      <div class="card-header"><i class="bi bi-clock-history"></i> Verlauf</div>
+      <div class="table-responsive">
+        <table class="table mb-0 history-table">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3" style="font-weight:600;font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Zeit</th>
+              <th style="font-weight:600;font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Einsatz</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in state.alarm_history %}
+            <tr>
+              <td class="text-nowrap ps-3" style="color:var(--muted);font-size:.78rem">{{ a.time }}</td>
+              <td>
+                <div style="font-weight:600;font-size:.85rem">{{ a.title }}</div>
+                {% if a.text %}<div style="font-size:.78rem;color:var(--muted)">{{ a.text[:60] }}</div>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
+    </div>
     {% endif %}
-  </div>
-</div>
 
-<!-- Einsatz-Verlauf -->
-{% if state.alarm_history %}
-<div class="card mt-4">
-  <div class="card-header fw-bold"><i class="bi bi-clock-history"></i> Einsatz-Verlauf (diese Sitzung)</div>
-  <div class="table-responsive">
-    <table class="table table-hover mb-0">
-      <thead class="table-light"><tr><th>Zeit</th><th>Titel</th><th>Details</th></tr></thead>
-      <tbody>
-        {% for a in state.alarm_history %}
-          <tr>
-            <td class="text-nowrap small text-muted">{{ a.time }}</td>
-            <td><strong>{{ a.title }}</strong></td>
-            <td class="small text-muted">{{ a.text[:80] }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
   </div>
 </div>
-{% endif %}
 
 <!-- Divera Debug -->
 <div class="card mt-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <span class="fw-bold"><i class="bi bi-bug"></i> Divera Debug — Aktive Einsätze</span>
-    <button class="btn btn-outline-secondary btn-sm" onclick="loadDebug(this)">
+  <div class="card-header justify-content-between">
+    <span><i class="bi bi-bug"></i> Divera Debug</span>
+    <button class="btn btn-sm btn-outline-secondary" onclick="loadDebug(this)" style="font-size:.78rem;padding:.25rem .65rem">
       <i class="bi bi-arrow-repeat"></i> Abrufen
     </button>
   </div>
-  <div class="card-body p-0">
-    <div id="debug-out" class="p-3 text-muted small">Klicke auf "Abrufen" um die aktuelle Divera-API-Antwort zu laden.</div>
+  <div id="debug-out" class="card-body text-muted small">
+    Klicke auf "Abrufen" um die aktuelle Divera-API-Antwort zu sehen.
   </div>
 </div>
 
@@ -139,11 +180,15 @@
 
 {% block scripts %}
 <script>
+function toggleCheck(cb) {
+  const lbl = document.getElementById('lbl_' + cb.value);
+  lbl.classList.toggle('checked', cb.checked);
+}
+
 function loadDebug(btn) {
   const out = document.getElementById('debug-out');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-  out.innerHTML = '<span class="text-muted">Lade...</span>';
 
   fetch('/api/divera-debug')
     .then(r => r.json())
@@ -157,49 +202,45 @@ function loadDebug(btn) {
       }
 
       const data = d.data;
-      const success = data?.success;
       const alarm = data?.data;
 
-      if (!success || !alarm || !alarm.id) {
+      if (!data?.success || !alarm?.id) {
         out.innerHTML = `
-          <div class="alert alert-warning mb-0 rounded-0 border-0">
-            <i class="bi bi-info-circle"></i> Divera meldet <strong>keinen aktiven Einsatz</strong>
-            ${!success && data?.error ? `<br><small class="text-muted">${data.error}</small>` : ''}
+          <div class="d-flex align-items-center gap-2 text-muted">
+            <i class="bi bi-check-circle text-success fs-5"></i>
+            <div>
+              <div class="fw-semibold" style="color:var(--text)">Kein aktiver Einsatz</div>
+              ${data?.error ? `<div style="font-size:.78rem">${data.error}</div>` : ''}
+            </div>
           </div>`;
         return;
       }
 
       const ts = alarm.date ? new Date(alarm.date * 1000).toLocaleString('de-DE') : '—';
-      const fields = [
-        ['ID',        alarm.id],
-        ['Titel',     alarm.title || '—'],
-        ['Stichwort', alarm.text || '—'],
-        ['Adresse',   alarm.address || '—'],
-        ['Datum',     ts],
-        ['Koordinaten', alarm.lat ? `${alarm.lat}, ${alarm.lng}` : '—'],
-      ];
-
-      const rows = fields.map(([k, v]) =>
-        `<tr><td class="text-muted pe-3" style="white-space:nowrap">${k}</td><td><strong>${v}</strong></td></tr>`
-      ).join('');
+      const rows = [
+        ['ID', alarm.id], ['Titel', alarm.title||'—'],
+        ['Stichwort', alarm.text||'—'], ['Adresse', alarm.address||'—'], ['Zeit', ts],
+      ].map(([k,v]) => `
+        <div class="d-flex gap-3 py-1 border-bottom" style="border-color:var(--border)!important">
+          <span style="width:80px;color:var(--muted);flex-shrink:0">${k}</span>
+          <span style="font-weight:600">${v}</span>
+        </div>`).join('');
 
       out.innerHTML = `
-        <div class="p-3 border-bottom">
-          <span class="badge bg-danger me-2">Einsatz aktiv</span>
-          <span class="text-muted small">HTTP ${d.status_code}</span>
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="alarm-badge"><i class="bi bi-exclamation-triangle-fill"></i> Einsatz aktiv</span>
+          <span style="color:var(--muted);font-size:.75rem">HTTP ${d.status_code}</span>
         </div>
-        <div class="p-3">
-          <table class="table table-sm table-borderless mb-3">${rows}</table>
-          <details>
-            <summary class="text-muted small" style="cursor:pointer">Rohdaten (JSON)</summary>
-            <pre class="mt-2 p-2 bg-light rounded small" style="max-height:300px;overflow:auto">${JSON.stringify(data, null, 2)}</pre>
-          </details>
-        </div>`;
+        ${rows}
+        <details class="mt-3">
+          <summary style="cursor:pointer;color:var(--muted);font-size:.78rem">Rohdaten anzeigen</summary>
+          <pre class="debug-pre mt-2">${JSON.stringify(data, null, 2)}</pre>
+        </details>`;
     })
     .catch(e => {
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Abrufen';
-      out.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> Verbindungsfehler: ${e}</span>`;
+      out.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${e}</span>`;
     });
 }
 </script>

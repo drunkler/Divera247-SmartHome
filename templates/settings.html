@@ -6,71 +6,75 @@
 
     <!-- Divera & Allgemein -->
     <div class="card mb-4">
-      <div class="card-header fw-bold"><i class="bi bi-gear-fill"></i> Einstellungen</div>
+      <div class="card-header"><i class="bi bi-gear-fill"></i> Allgemeine Einstellungen</div>
       <div class="card-body">
         <form method="post">
           <input type="hidden" name="action" value="general">
+
           <div class="mb-4">
-            <label class="form-label fw-semibold">Divera 247 Access-Key</label>
+            <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">DIVERA 247 ACCESS-KEY</label>
             <input type="text" class="form-control font-monospace" name="access_key"
-                   value="{{ cfg.divera_access_key }}" placeholder="Hier deinen API-Key eintragen">
-            <div class="form-text">
-              <strong>Wichtig:</strong> Hier wird der <strong>Organisations-API-Key</strong> benötigt, <em>nicht</em> der persönliche Account-Key.<br>
-              Zu finden in Divera 247 unter:
-              <strong>Verwaltung → Einstellungen → Schnittstellen → API</strong>
+                   value="{{ cfg.divera_access_key }}" placeholder="API-Key eintragen…"
+                   style="border-radius:8px;font-size:.83rem">
+            <div class="form-text mt-1">
+              <i class="bi bi-info-circle"></i>
+              Organisations-Key aus <strong>Divera → Verwaltung → Einstellungen → Schnittstellen → API</strong>
+              <br><span class="text-danger small">Nicht der persönliche Account-Key!</span>
             </div>
           </div>
 
-          <div class="mb-4">
-            <label class="form-label fw-semibold">Abfrageintervall (Sekunden)</label>
-            <input type="number" class="form-control" name="poll_interval"
-                   value="{{ cfg.poll_interval }}" min="10" max="300">
-            <div class="form-text">Wie oft die Divera-API auf neue Einsätze geprüft wird. Minimum: 10 Sek.</div>
-          </div>
-
-          <div class="mb-4">
-            <label class="form-label fw-semibold">Lichter automatisch ausschalten nach (Sekunden)</label>
-            <input type="number" class="form-control" name="auto_off_seconds"
-                   value="{{ cfg.auto_off_seconds }}" min="0">
-            <div class="form-text">
-              <code>0</code> = Lichter bleiben dauerhaft an bis zum manuellen Ausschalten.
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">ABFRAGEINTERVALL (SEK.)</label>
+              <input type="number" class="form-control" name="poll_interval"
+                     value="{{ cfg.poll_interval }}" min="10" max="300" style="border-radius:8px">
+              <div class="form-text">Min. 10 Sek.</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">AUTO-OFF NACH (SEK.)</label>
+              <input type="number" class="form-control" name="auto_off_seconds"
+                     value="{{ cfg.auto_off_seconds }}" min="0" style="border-radius:8px">
+              <div class="form-text"><code>0</code> = dauerhaft an</div>
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary w-100">
+          {% if state.poll_error %}
+          <div class="alert alert-danger py-2 mb-3" style="font-size:.83rem">
+            <i class="bi bi-exclamation-triangle"></i> {{ state.poll_error }}
+          </div>
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary w-100" style="border-radius:8px;font-weight:600">
             <i class="bi bi-save"></i> Speichern
           </button>
         </form>
       </div>
     </div>
 
-    {% if state.poll_error %}
-    <div class="alert alert-danger">
-      <strong><i class="bi bi-exclamation-triangle"></i> API-Fehler:</strong> {{ state.poll_error }}
-    </div>
-    {% endif %}
-
-    <!-- Zugangsdaten ändern -->
+    <!-- Zugangsdaten -->
     <div class="card mb-4">
-      <div class="card-header fw-bold"><i class="bi bi-shield-lock"></i> Zugangsdaten ändern</div>
+      <div class="card-header"><i class="bi bi-shield-lock"></i> Zugangsdaten ändern</div>
       <div class="card-body">
         <form method="post">
           <input type="hidden" name="action" value="password">
           <div class="mb-3">
-            <label class="form-label fw-semibold">Benutzername</label>
+            <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">BENUTZERNAME</label>
             <input type="text" class="form-control" name="new_username"
-                   value="{{ cfg.username or 'admin' }}" autocomplete="username">
+                   value="{{ cfg.username or 'admin' }}" autocomplete="username" style="border-radius:8px">
           </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Neues Passwort</label>
-            <input type="password" class="form-control" name="new_password"
-                   placeholder="Mindestens 4 Zeichen" autocomplete="new-password">
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">NEUES PASSWORT</label>
+              <input type="password" class="form-control" name="new_password"
+                     placeholder="Mind. 4 Zeichen" autocomplete="new-password" style="border-radius:8px">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">BESTÄTIGEN</label>
+              <input type="password" class="form-control" name="confirm_password"
+                     autocomplete="new-password" style="border-radius:8px">
+            </div>
           </div>
-          <div class="mb-4">
-            <label class="form-label fw-semibold">Passwort bestätigen</label>
-            <input type="password" class="form-control" name="confirm_password" autocomplete="new-password">
-          </div>
-          <button type="submit" class="btn btn-warning w-100">
+          <button type="submit" class="btn btn-warning w-100" style="border-radius:8px;font-weight:600">
             <i class="bi bi-key"></i> Zugangsdaten speichern
           </button>
         </form>
@@ -79,16 +83,16 @@
 
     <!-- Software-Update -->
     <div class="card mb-4">
-      <div class="card-header fw-bold"><i class="bi bi-cloud-arrow-down"></i> Software-Update</div>
+      <div class="card-header"><i class="bi bi-cloud-arrow-down"></i> Software-Update</div>
       <div class="card-body">
         <div id="update-status" class="mb-3 text-muted small">
           Klicke auf "Prüfen" um nach Updates zu suchen.
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-outline-secondary" id="btn-check" onclick="checkUpdate()">
+          <button class="btn btn-outline-secondary btn-sm" id="btn-check" onclick="checkUpdate()" style="border-radius:7px">
             <i class="bi bi-arrow-repeat"></i> Nach Updates suchen
           </button>
-          <button class="btn btn-success d-none" id="btn-apply" onclick="applyUpdate()">
+          <button class="btn btn-success btn-sm d-none" id="btn-apply" onclick="applyUpdate()" style="border-radius:7px">
             <i class="bi bi-cloud-arrow-down-fill"></i> Jetzt aktualisieren
           </button>
         </div>
@@ -97,7 +101,7 @@
 
     <!-- Abmelden -->
     <div class="text-center">
-      <a href="/logout" class="btn btn-outline-secondary btn-sm">
+      <a href="/logout" class="btn btn-outline-secondary btn-sm" style="border-radius:7px">
         <i class="bi bi-box-arrow-right"></i> Abmelden ({{ session.username }})
       </a>
     </div>
@@ -114,30 +118,25 @@ function checkUpdate() {
   const status = document.getElementById('update-status');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Prüfe...';
-  status.innerHTML = '';
-
-  fetch('/update/check')
-    .then(r => r.json())
-    .then(d => {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Nach Updates suchen';
-      if (!d.ok) {
-        status.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${d.error}</span>`;
-        return;
-      }
-      if (d.up_to_date) {
-        status.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Aktuell <span class="text-muted">(${d.local})</span></span>`;
-        document.getElementById('btn-apply').classList.add('d-none');
-      } else {
-        status.innerHTML = `<span class="text-warning"><i class="bi bi-exclamation-circle"></i> Update verfügbar — <strong>${d.commits_behind} neuer Commit${d.commits_behind > 1 ? 's' : ''}</strong> <span class="text-muted">(${d.local} → ${d.remote})</span></span>`;
-        document.getElementById('btn-apply').classList.remove('d-none');
-      }
-    })
-    .catch(() => {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Nach Updates suchen';
-      status.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Verbindungsfehler</span>';
-    });
+  fetch('/update/check').then(r => r.json()).then(d => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Nach Updates suchen';
+    if (!d.ok) {
+      status.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${d.error}</span>`;
+      return;
+    }
+    if (d.up_to_date) {
+      status.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Aktuell <span class="text-muted">(${d.local})</span></span>`;
+      document.getElementById('btn-apply').classList.add('d-none');
+    } else {
+      status.innerHTML = `<span class="text-warning"><i class="bi bi-exclamation-circle"></i> <strong>${d.commits_behind} neuer Commit${d.commits_behind>1?'s':''}</strong> verfügbar <span class="text-muted">(${d.local} → ${d.remote})</span></span>`;
+      document.getElementById('btn-apply').classList.remove('d-none');
+    }
+  }).catch(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Nach Updates suchen';
+    status.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Verbindungsfehler</span>';
+  });
 }
 
 function applyUpdate() {
@@ -145,24 +144,20 @@ function applyUpdate() {
   const status = document.getElementById('update-status');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Aktualisiere...';
-
-  fetch('/update/apply', { method: 'POST' })
-    .then(r => r.json())
-    .then(d => {
-      if (!d.ok) {
-        status.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${d.error}</span>`;
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-cloud-arrow-down-fill"></i> Jetzt aktualisieren';
-        return;
-      }
-      status.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Update eingespielt! Server startet neu…</span>`;
-      btn.classList.add('d-none');
-      setTimeout(() => { window.location.reload(); }, 4000);
-    })
-    .catch(() => {
-      status.innerHTML = '<span class="text-warning"><i class="bi bi-arrow-repeat"></i> Server startet neu, bitte Seite neu laden…</span>';
-      setTimeout(() => { window.location.reload(); }, 4000);
-    });
+  fetch('/update/apply', { method: 'POST' }).then(r => r.json()).then(d => {
+    if (!d.ok) {
+      status.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${d.error}</span>`;
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-cloud-arrow-down-fill"></i> Jetzt aktualisieren';
+      return;
+    }
+    status.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Update eingespielt! Server startet neu…</span>`;
+    btn.classList.add('d-none');
+    setTimeout(() => window.location.reload(), 4000);
+  }).catch(() => {
+    status.innerHTML = '<span class="text-warning"><i class="bi bi-arrow-repeat"></i> Server startet neu, Seite wird neu geladen…</span>';
+    setTimeout(() => window.location.reload(), 4000);
+  });
 }
 </script>
 {% endblock %}
