@@ -51,7 +51,39 @@ cd Divera247-SmartHome
 
 Dann `start.bat` doppelklicken — richtet automatisch eine virtuelle Python-Umgebung ein, installiert alle Abhängigkeiten und öffnet `http://localhost:5000` im Browser.
 
-### Manuell (Windows/Linux/macOS)
+### Linux (empfohlen für Dauerbetrieb, z.B. Raspberry Pi)
+
+```bash
+git clone https://github.com/drunkler/Divera247-SmartHome.git
+cd Divera247-SmartHome
+sudo bash install.sh
+```
+
+Das Skript erledigt automatisch:
+- Python 3 & Git installieren (apt / dnf / pacman)
+- Virtuelle Python-Umgebung anlegen & Pakete installieren
+- Systemd-Service einrichten (Autostart beim Booten)
+- Port 5000 in der Firewall freigeben (ufw / firewalld)
+- Service direkt starten
+
+Nützliche Befehle danach:
+
+```bash
+sudo systemctl status divera-shelly    # Status prüfen
+sudo systemctl restart divera-shelly   # Neustart
+sudo journalctl -u divera-shelly -f    # Live-Log
+```
+
+### Windows
+
+```bat
+git clone https://github.com/drunkler/Divera247-SmartHome.git
+cd Divera247-SmartHome
+```
+
+Dann `start.bat` doppelklicken — richtet automatisch eine virtuelle Python-Umgebung ein, installiert alle Abhängigkeiten und öffnet `http://localhost:5000` im Browser.
+
+### Manuell (alle Plattformen)
 
 ```bash
 git clone https://github.com/drunkler/Divera247-SmartHome.git
