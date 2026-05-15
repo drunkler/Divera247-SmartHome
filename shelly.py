@@ -64,6 +64,30 @@ def turn_off(device):
     return resp.json()
 
 
+def restore_state(device, saved_state):
+    """Stellt den vor dem Einsatz gespeicherten Zustand wieder her."""
+    api_type = device.get("api_type") or device.get("type", "relay")
+    was_on = saved_state.get("ison", False)
+    params = {"turn": "on" if was_on else "off"}
+
+    if was_on:
+        if api_type == "color":
+            params["red"]   = saved_state.get("red",   0)
+            params["green"] = saved_state.get("green",  0)
+            params["blue"]  = saved_state.get("blue",   0)
+            params["white"] = saved_state.get("white",  0)
+            params["gain"]  = saved_state.get("gain",  100)
+        elif api_type == "duo":
+            params["brightness"] = saved_state.get("brightness", 100)
+            params["kelvin"]     = saved_state.get("kelvin",     4000)
+        elif api_type in ("dimmer", "light", "white"):
+            params["brightness"] = saved_state.get("brightness", 100)
+
+    resp = requests.get(_base(device), params=params, timeout=TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
+
+
 def get_status(device):
     resp = requests.get(_base(device), timeout=TIMEOUT)
     resp.raise_for_status()
