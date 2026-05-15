@@ -1,15 +1,16 @@
 # Divera247 → SmartHome Schnittstelle
 
-Verbindet **Divera 247** (Einsatzleitsystem für Feuerwehr & Rettungsdienste) mit **Shelly**-Geräten. Wenn ein neuer Einsatz eingeht, werden automatisch ausgewählte Lichter eingeschaltet.
+Verbindet **Divera 247** (Einsatzleitsystem für Feuerwehr & Rettungsdienste) mit **Shelly**-Geräten und **Home Assistant**. Wenn ein neuer Einsatz eingeht, werden automatisch ausgewählte Lichter und Schalter eingeschaltet.
 
-> **Hinweis:** Dieses Projekt ist ein unabhängiges Community-Projekt und steht in keiner Verbindung zu Divera GmbH oder Shelly (Allterco Robotics). Alle verwendeten Markennamen sind Eigentum ihrer jeweiligen Inhaber. Die Nutzung der Divera-API erfolgt ausschließlich über den offiziellen, öffentlich dokumentierten Zugangscode des eigenen Accounts.
+> **Hinweis:** Dieses Projekt ist ein unabhängiges Community-Projekt und steht in keiner Verbindung zu Divera GmbH, Shelly (Allterco Robotics) oder Nabu Casa (Home Assistant). Alle verwendeten Markennamen sind Eigentum ihrer jeweiligen Inhaber. Die Nutzung der APIs erfolgt ausschließlich über offizielle, öffentlich dokumentierte Zugangswege des eigenen Accounts.
 
 ## Features
 
 - Automatisches Polling der Divera 247 API auf neue Einsätze
 - Unterstützung von **Organisations-Key** und **persönlichem Account-Key**
-- Weboberfläche zur Verwaltung von Shelly-Geräten (Hinzufügen, Testen, Löschen, Bearbeiten)
-- Auswahl welche Geräte bei einem Einsatz gesteuert werden
+- **Shelly Gen1**: direkte lokale HTTP-Steuerung ohne Cloud
+- **Home Assistant**: Steuerung beliebiger `light.*` und `switch.*` Entitäten über die HA REST-API
+- Weboberfläche zur Verwaltung von Geräten und Entitäten
 - **Zustandsspeicherung**: Vor dem Einsatz wird Farbe, Helligkeit und Farbtemperatur jedes Geräts gespeichert und danach wiederhergestellt
 - Optionaler Auto-Off-Timer — Geräte die vorher **aus** waren werden ausgeschaltet, Geräte die **an** waren kehren zu ihrem Originalzustand zurück
 - Manuelle Steuerung (Ein/Aus) über die Weboberfläche
@@ -19,7 +20,7 @@ Verbindet **Divera 247** (Einsatzleitsystem für Feuerwehr & Rettungsdienste) mi
 
 ## Unterstützte Geräte
 
-**Shelly Generation 1** (lokale HTTP-API):
+### Shelly Generation 1 (lokale HTTP-API)
 
 | Modell | Typ | Steuerung |
 |---|---|---|
@@ -35,12 +36,16 @@ Verbindet **Divera 247** (Einsatzleitsystem für Feuerwehr & Rettungsdienste) mi
 | Shelly RGBW2 (Farbmodus) | RGB | Ein/Aus + Farbe (RGBW) + Helligkeit |
 | Shelly RGBW2 (Weißkanal) | White (4 Kanäle) | Ein/Aus + Helligkeit |
 
+### Home Assistant
+
+Alle Entitäten der Domänen `light` und `switch` können ausgewählt werden — unabhängig davon welches Gerät dahintersteckt (Zigbee, Z-Wave, WLAN, etc.).
+
 ## Voraussetzungen
 
 - Python 3.10 oder neuer → [python.org/downloads](https://www.python.org/downloads/)
   - Bei der Installation **"Add Python to PATH"** ankreuzen!
 - Git → [git-scm.com](https://git-scm.com/) (für die Update-Funktion)
-- Shelly-Gerät im gleichen lokalen Netzwerk
+- Shelly-Gerät im gleichen lokalen Netzwerk **und/oder** laufende Home Assistant Instanz
 - Divera 247 API-Zugangscode (Organisations- oder persönlicher Key)
 
 ## Installation & Start
@@ -101,19 +106,25 @@ Beim ersten Start wird automatisch ein Standard-Login angelegt:
 
 **Bitte sofort unter Einstellungen → Zugangsdaten ändern!**
 
-### Einrichtung
+### Divera API einrichten
 
 1. **Key-Typ wählen**: Einstellungen → Key-Typ
    - **Organisations-Key**: aus *Divera → Verwaltung → Einstellungen → Schnittstellen → API*
    - **Persönlicher Key**: aus *Divera → Mein Konto → Einstellungen → API*
 
-2. **API-Key eintragen**: Einstellungen → Access-Key
+2. **API-Key eintragen** und Abfrageintervall festlegen
 
-3. **Shelly-Geräte hinzufügen**: Geräte → Modell, IP-Adresse, Kanal und gewünschte Alarm-Einstellungen (Farbe, Helligkeit, Farbtemperatur) eintragen
+### Shelly-Geräte einrichten
 
-4. **Lichter auswählen**: Im Dashboard Häkchen bei den Geräten setzen, die bei einem Einsatz gesteuert werden sollen
+1. **Geräte → Gerät hinzufügen**: Modell, IP-Adresse, Kanal und Alarm-Einstellungen (Farbe, Helligkeit, Farbtemperatur) eintragen
+2. **Dashboard → Lichter bei Einsatz**: Häkchen bei den gewünschten Geräten setzen
 
-5. **Optional — Auto-Off**: In den Einstellungen eine Zeit in Sekunden eintragen, nach der der Originalzustand wiederhergestellt wird (`0` = dauerhaft an)
+### Home Assistant einrichten
+
+1. **Einstellungen → Home Assistant**: URL und Long-Lived Access Token eintragen
+   - Token erstellen: *HA → Profil → Sicherheit → Langlebige Zugangstokens → Token erstellen*
+   - Mit „Verbindung testen" prüfen ob HA erreichbar ist
+2. **Dashboard → Home Assistant bei Einsatz**: „Laden" klicken, gewünschte Entitäten auswählen und speichern
 
 ### Zustandswiederherstellung
 
@@ -121,6 +132,8 @@ Wenn der Auto-Off-Timer aktiv ist, wird beim Einsatz der aktuelle Zustand jedes 
 
 - Gerät war **aus** → wird nach dem Timer ausgeschaltet
 - Gerät war **an** → kehrt nach dem Timer zu Originalfarbe, -helligkeit und -farbtemperatur zurück
+
+Dies gilt sowohl für Shelly-Geräte als auch für Home Assistant Entitäten.
 
 ## Updates
 
@@ -133,6 +146,7 @@ Unter **Einstellungen → Software-Update** kann direkt in der Oberfläche nach 
 ├── config.py       # Konfigurationsverwaltung (config.json)
 ├── divera.py       # Divera 247 API-Client
 ├── shelly.py       # Shelly Gen1 HTTP-Steuerung (alle Typen)
+├── ha.py           # Home Assistant REST-API Client
 ├── templates/      # HTML-Oberfläche (Bootstrap 5)
 │   ├── base.html
 │   ├── login.html
@@ -152,5 +166,6 @@ MIT — siehe [LICENSE](LICENSE)
 Dieses Projekt ist **nicht offiziell** und steht in keiner Verbindung zu:
 - **Divera GmbH** (Hersteller von Divera 247)
 - **Allterco Robotics** (Hersteller von Shelly)
+- **Nabu Casa** (Hersteller von Home Assistant)
 
 Die Nutzung erfolgt auf eigene Verantwortung. Dieses Projekt verwendet ausschließlich öffentlich dokumentierte, offizielle APIs über den eigenen Account-Zugangscode. Es werden keine Sicherheitsmechanismen umgangen.
