@@ -47,7 +47,7 @@ Dann im Browser: [http://localhost:5000](http://localhost:5000)
 ## Konfiguration
 
 1. **Divera API-Key eintragen**: Einstellungen → Access-Key  
-   *(In Divera 247: Verwaltung → Schnittstellen → API)*
+   *(In Divera 247: [Kontoeinstellungen](https://app.divera247.com/account/einstellungen.html))*
 
 2. **Shelly-Geräte hinzufügen**: Geräte → IP-Adresse, Name, Typ und Kanal eintragen
 
