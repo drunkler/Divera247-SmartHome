@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Status-Leiste -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <span class="status-dot {% if state.lights_on %}dot-green{% else %}dot-grey{% endif %}" style="width:18px;height:18px;"></span>
+        <div>
+          <div class="fw-bold">Lichter</div>
+          <div class="text-muted small">
+            {% if state.lights_on %}An seit {{ state.lights_on_since }}{% else %}Aus{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <span class="status-dot {% if cfg.divera_access_key %}dot-green{% else %}dot-red{% endif %}" style="width:18px;height:18px;"></span>
+        <div>
+          <div class="fw-bold">Divera API</div>
+          <div class="text-muted small">
+            {% if cfg.divera_access_key %}
+              {% if state.poll_error %}<span class="text-danger">Fehler: {{ state.poll_error[:40] }}</span>
+              {% else %}Verbunden{% endif %}
+            {% else %}Kein API-Key konfiguriert{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-clock fs-4 text-secondary"></i>
+        <div>
+          <div class="fw-bold">Abfrageintervall</div>
+          <div class="text-muted small">alle {{ cfg.poll_interval }} Sekunden</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Lichtauswahl -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold"><i class="bi bi-lightbulb-fill text-warning"></i> Lichter bei Einsatz einschalten</div>
+      <div class="card-body">
+        {% if devices %}
+          <form method="post" action="/lights/select">
+            <p class="text-muted small mb-3">Wähle aus, welche Lichter bei einem neuen Einsatz automatisch angehen:</p>
+            {% for dev in devices %}
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="lights" value="{{ dev.id }}"
+                       id="dev_{{ dev.id }}" {% if dev.id in selected %}checked{% endif %}>
+                <label class="form-check-label d-flex align-items-center gap-2" for="dev_{{ dev.id }}">
+                  <i class="bi bi-plug text-secondary"></i>
+                  <strong>{{ dev.name }}</strong>
+                  <span class="text-muted small">({{ dev.ip }} · Kanal {{ dev.channel }} · {{ dev.type }})</span>
+                </label>
+              </div>
+            {% endfor %}
+            <div class="mt-3 d-flex gap-2">
+              <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Auswahl speichern</button>
+            </div>
+          </form>
+        {% else %}
+          <p class="text-muted">Noch keine Shelly-Geräte konfiguriert. <a href="/devices">Jetzt hinzufügen →</a></p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Manuell & letzter Einsatz -->
+  <div class="col-lg-6">
+    <div class="card mb-4">
+      <div class="card-header fw-bold"><i class="bi bi-toggles"></i> Manuelle Steuerung</div>
+      <div class="card-body d-flex gap-2">
+        <a href="/lights/on" class="btn btn-success"><i class="bi bi-power"></i> Alle AN</a>
+        <a href="/lights/off" class="btn btn-danger"><i class="bi bi-power"></i> Alle AUS</a>
+      </div>
+    </div>
+
+    {% if state.last_alarm %}
+      <div class="card alarm-card">
+        <div class="card-header fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Letzter Einsatz</div>
+        <div class="card-body">
+          <div class="fw-bold fs-5">{{ state.last_alarm.get('title', '—') }}</div>
+          <div class="text-muted small mb-1">{{ state.last_alarm.get('text', '') }}</div>
+          <div class="text-muted small">
+            <i class="bi bi-geo-alt"></i> {{ state.last_alarm.get('address', '—') }}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Einsatz-Verlauf -->
+{% if state.alarm_history %}
+<div class="card mt-4">
+  <div class="card-header fw-bold"><i class="bi bi-clock-history"></i> Einsatz-Verlauf (diese Sitzung)</div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr><th>Zeit</th><th>Titel</th><th>Details</th></tr></thead>
+      <tbody>
+        {% for a in state.alarm_history %}
+          <tr>
+            <td class="text-nowrap small text-muted">{{ a.time }}</td>
+            <td><strong>{{ a.title }}</strong></td>
+            <td class="small text-muted">{{ a.text[:80] }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-refresh Status alle 15 Sekunden
+  setInterval(() => {
+    fetch('/api/state').then(r => r.json()).then(s => {
+      const dot = document.querySelector('.status-dot:first-child');
+    });
+  }, 15000);
+</script>
+{% endblock %}

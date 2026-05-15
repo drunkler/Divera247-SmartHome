@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold"><i class="bi bi-gear-fill"></i> Einstellungen</div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Divera 247 Access-Key</label>
+            <input type="text" class="form-control font-monospace" name="access_key"
+                   value="{{ cfg.divera_access_key }}" placeholder="Hier deinen API-Key eintragen">
+            <div class="form-text">
+              Den Key findest du in Divera 247 unter
+              <strong>Verwaltung → Schnittstellen → API</strong>.
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Abfrageintervall (Sekunden)</label>
+            <input type="number" class="form-control" name="poll_interval"
+                   value="{{ cfg.poll_interval }}" min="10" max="300">
+            <div class="form-text">Wie oft die Divera-API auf neue Einsätze geprüft wird. Minimum: 10 Sek.</div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Lichter automatisch ausschalten nach (Sekunden)</label>
+            <input type="number" class="form-control" name="auto_off_seconds"
+                   value="{{ cfg.auto_off_seconds }}" min="0">
+            <div class="form-text">
+              <code>0</code> = Lichter bleiben dauerhaft an bis zum manuellen Ausschalten.
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-save"></i> Speichern
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {% if state.poll_error %}
+    <div class="alert alert-danger mt-3">
+      <strong><i class="bi bi-exclamation-triangle"></i> API-Fehler:</strong> {{ state.poll_error }}
+    </div>
+    {% endif %}
+
+    <div class="card mt-3">
+      <div class="card-body">
+        <h6 class="fw-bold"><i class="bi bi-question-circle"></i> Wo finde ich den API-Key?</h6>
+        <ol class="small text-muted mb-0">
+          <li>In Divera 247 einloggen</li>
+          <li><strong>Verwaltung</strong> → <strong>Schnittstellen</strong> aufrufen</li>
+          <li>Unter <strong>API / Zugangscode</strong> den Key kopieren</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

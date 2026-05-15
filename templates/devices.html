@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row g-4">
+  <!-- Gerät hinzufügen -->
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header fw-bold"><i class="bi bi-plus-circle"></i> Shelly-Gerät hinzufügen</div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-control" name="name" placeholder="z.B. Garagentor-Licht" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">IP-Adresse</label>
+            <input type="text" class="form-control" name="ip" placeholder="192.168.1.100" required
+                   pattern="^(\d{1,3}\.){3}\d{1,3}$">
+            <div class="form-text">Die lokale IP deines Shelly-Geräts im Netzwerk.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Typ</label>
+            <select class="form-select" name="type">
+              <option value="relay">Relay (Shelly 1, 2.5, Plug, …)</option>
+              <option value="light">Light (Shelly RGBW2, Bulb, …)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Kanal</label>
+            <select class="form-select" name="channel">
+              <option value="0">Kanal 0 (Standard)</option>
+              <option value="1">Kanal 1 (Shelly 2.5 zweiter Ausgang)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus"></i> Hinzufügen</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Geräteliste -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header fw-bold"><i class="bi bi-plug"></i> Konfigurierte Geräte ({{ cfg.shelly_devices|length }})</div>
+      {% if cfg.shelly_devices %}
+        <ul class="list-group list-group-flush">
+          {% for dev in cfg.shelly_devices %}
+            <li class="list-group-item">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <strong>{{ dev.name }}</strong>
+                  <span class="badge bg-secondary ms-2">{{ dev.type }}</span>
+                  <span class="badge bg-light text-dark ms-1">Kanal {{ dev.channel }}</span>
+                  <div class="text-muted small mt-1"><i class="bi bi-hdd-network"></i> {{ dev.ip }}</div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-secondary btn-sm"
+                          onclick="testDevice('{{ dev.id }}', this)">
+                    <i class="bi bi-wifi"></i> Test
+                  </button>
+                  <a href="/devices/delete/{{ dev.id }}"
+                     onclick="return confirm('Gerät \'{{ dev.name }}\' wirklich entfernen?')"
+                     class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                </div>
+              </div>
+              <div id="test_{{ dev.id }}" class="mt-2 small"></div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="card-body text-muted">Noch keine Geräte konfiguriert.</div>
+      {% endif %}
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-body">
+        <h6 class="fw-bold"><i class="bi bi-info-circle"></i> Shelly Gen1 API-Endpunkte</h6>
+        <p class="text-muted small mb-1">Relay ein: <code>http://&lt;IP&gt;/relay/0?turn=on</code></p>
+        <p class="text-muted small mb-1">Relay aus: <code>http://&lt;IP&gt;/relay/0?turn=off</code></p>
+        <p class="text-muted small mb-0">Light ein: <code>http://&lt;IP&gt;/light/0?turn=on</code></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testDevice(id, btn) {
+  const out = document.getElementById('test_' + id);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  fetch('/devices/test/' + id)
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        out.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Erreichbar — Zustand: ' +
+          (d.status?.ison !== undefined ? (d.status.ison ? 'AN' : 'AUS') : JSON.stringify(d.status)) + '</span>';
+      } else {
+        out.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ' + d.error + '</span>';
+      }
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-wifi"></i> Test';
+    });
+}
+</script>
+{% endblock %}
