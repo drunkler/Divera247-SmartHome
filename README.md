@@ -112,7 +112,7 @@ Beim ersten Start wird automatisch ein Standard-Login angelegt:
 ### Einrichtung
 
 1. **Divera API-Key eintragen**: Einstellungen → Access-Key  
-   *(In Divera 247: [Kontoeinstellungen](https://app.divera247.com/account/einstellungen.html))*
+   *(In Divera 247: **Verwaltung → Einstellungen → Schnittstellen → API** — dies ist der Organisations-Key, nicht der persönliche Account-Key)*
 
 2. **Shelly-Geräte hinzufügen**: Geräte → Modell, IP-Adresse, Kanal und gewünschte Alarm-Einstellungen (Farbe, Helligkeit, Farbtemperatur) eintragen
 

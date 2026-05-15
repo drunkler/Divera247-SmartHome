@@ -138,13 +138,12 @@ def poll_divera():
         return
 
     try:
-        alarms = divera.fetch_alarms(key)
+        latest = divera.fetch_last_alarm(key)
         state["poll_error"] = None
 
-        if not alarms:
+        if not latest:
             return
 
-        latest = alarms[0]
         latest_id = latest.get("id")
 
         if latest_id and latest_id != cfg.get("last_alarm_id"):
