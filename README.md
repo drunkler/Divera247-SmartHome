@@ -2,6 +2,8 @@
 
 Verbindet **Divera 247** (Einsatzleitsystem für Feuerwehr & Rettungsdienste) mit **Shelly**-Geräten. Wenn ein neuer Einsatz eingeht, werden automatisch ausgewählte Lichter eingeschaltet.
 
+> **Hinweis:** Dieses Projekt ist ein unabhängiges Community-Projekt und steht in keiner Verbindung zu Divera GmbH oder Shelly (Allterco Robotics). Alle verwendeten Markennamen sind Eigentum ihrer jeweiligen Inhaber. Die Nutzung der Divera-API erfolgt ausschließlich über den offiziellen, öffentlich dokumentierten Zugangscode des eigenen Accounts.
+
 ## Features
 
 - Automatisches Polling der Divera 247 API auf neue Einsätze
@@ -165,4 +167,12 @@ Unter **Einstellungen → Software-Update** kann direkt in der Oberfläche nach 
 
 ## Lizenz
 
-MIT
+MIT — siehe [LICENSE](LICENSE)
+
+## Haftungsausschluss
+
+Dieses Projekt ist **nicht offiziell** und steht in keiner Verbindung zu:
+- **Divera GmbH** (Hersteller von Divera 247)
+- **Allterco Robotics** (Hersteller von Shelly)
+
+Die Nutzung erfolgt auf eigene Verantwortung. Dieses Projekt verwendet ausschließlich öffentlich dokumentierte, offizielle APIs über den eigenen Account-Zugangscode. Es werden keine Sicherheitsmechanismen umgangen.
