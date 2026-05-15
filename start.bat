@@ -1,5 +1,5 @@
 @echo off
-echo Divera247 - Shelly Schnittstelle wird gestartet...
+echo Divera -> Smarthome wird gestartet...
 cd /d "%~dp0"
 
 :: Python suchen (verschiedene Installationswege)

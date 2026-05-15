@@ -12,14 +12,14 @@ fail() { echo -e "${RED}✗ FEHLER:${NC} $1"; exit 1; }
 header() { echo -e "\n${BOLD}$1${NC}"; }
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
-SERVICE_NAME="divera-shelly"
+SERVICE_NAME="divera-smarthome"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 VENV="$APP_DIR/.venv"
 RUN_USER="${SUDO_USER:-$(whoami)}"
 
 echo -e "${BOLD}"
 echo "  ╔══════════════════════════════════════════╗"
-echo "  ║   Divera247 → Shelly  –  Linux Installer ║"
+echo "  ║   Divera → Smarthome  –  Linux Installer  ║"
 echo "  ╚══════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -100,7 +100,7 @@ header "3/5  Systemd-Service einrichten"
 
 cat > "$SERVICE_FILE" << EOF
 [Unit]
-Description=Divera247 → Shelly Schnittstelle
+Description=Divera → Smarthome Schnittstelle
 After=network-online.target
 Wants=network-online.target
 

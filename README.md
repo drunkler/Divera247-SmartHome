@@ -1,4 +1,4 @@
-# Divera247 → SmartHome Schnittstelle
+# Divera → Smarthome
 
 Verbindet **Divera 247** (Einsatzleitsystem für Feuerwehr & Rettungsdienste) mit **Shelly**-Geräten und **Home Assistant**. Wenn ein neuer Einsatz eingeht, werden automatisch ausgewählte Lichter und Schalter eingeschaltet.
 
@@ -77,9 +77,9 @@ Das Skript erledigt automatisch:
 Nützliche Befehle danach:
 
 ```bash
-sudo systemctl status divera-shelly    # Status prüfen
-sudo systemctl restart divera-shelly   # Neustart
-sudo journalctl -u divera-shelly -f    # Live-Log
+sudo systemctl status divera-smarthome    # Status prüfen
+sudo systemctl restart divera-smarthome   # Neustart
+sudo journalctl -u divera-smarthome -f    # Live-Log
 ```
 
 ### Manuell (alle Plattformen)
