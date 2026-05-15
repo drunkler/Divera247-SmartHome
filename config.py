@@ -30,17 +30,28 @@ def save(cfg):
         json.dump(cfg, f, indent=2, ensure_ascii=False)
 
 
-def add_device(cfg, name, ip, device_type, channel):
+def add_device(cfg, name, ip, device_type, channel,
+               alarm_brightness=100, alarm_color=None):
     device = {
         "id": str(uuid.uuid4())[:8],
         "name": name,
         "ip": ip.strip(),
         "type": device_type,
         "channel": int(channel),
+        "alarm_brightness": int(alarm_brightness),
+        "alarm_color": alarm_color or {"red": 255, "green": 0, "blue": 0, "white": 0},
     }
     cfg["shelly_devices"].append(device)
     save(cfg)
     return device
+
+
+def update_device(cfg, device_id, **fields):
+    for dev in cfg["shelly_devices"]:
+        if dev["id"] == device_id:
+            dev.update(fields)
+            break
+    save(cfg)
 
 
 def remove_device(cfg, device_id):

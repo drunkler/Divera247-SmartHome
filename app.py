@@ -238,6 +238,14 @@ def settings():
     return render_template("settings.html", cfg=cfg, state=state)
 
 
+def _color_from_hex(hex_str):
+    hex_str = hex_str.lstrip("#")
+    r = int(hex_str[0:2], 16)
+    g = int(hex_str[2:4], 16)
+    b = int(hex_str[4:6], 16)
+    return {"red": r, "green": g, "blue": b, "white": 0}
+
+
 @app.route("/devices", methods=["GET", "POST"])
 @login_required
 def devices():
@@ -247,13 +255,36 @@ def devices():
         ip = request.form.get("ip", "").strip()
         dev_type = request.form.get("type", "relay")
         channel = request.form.get("channel", 0)
+        brightness = request.form.get("alarm_brightness", 100)
+        color_hex = request.form.get("alarm_color_hex", "#ff0000")
+        white = int(request.form.get("alarm_white", 0))
         if name and ip:
-            cfg_module.add_device(cfg, name, ip, dev_type, channel)
+            alarm_color = _color_from_hex(color_hex)
+            alarm_color["white"] = white
+            cfg_module.add_device(cfg, name, ip, dev_type, channel,
+                                  alarm_brightness=brightness,
+                                  alarm_color=alarm_color)
             flash(f"Gerät '{name}' hinzugefügt.", "success")
         else:
             flash("Name und IP sind Pflichtfelder.", "danger")
         return redirect(url_for("devices"))
     return render_template("devices.html", cfg=cfg, state=state)
+
+
+@app.route("/devices/edit/<device_id>", methods=["POST"])
+@login_required
+def edit_device(device_id):
+    cfg = cfg_module.load()
+    brightness = int(request.form.get("alarm_brightness", 100))
+    color_hex = request.form.get("alarm_color_hex", "#ff0000")
+    white = int(request.form.get("alarm_white", 0))
+    alarm_color = _color_from_hex(color_hex)
+    alarm_color["white"] = white
+    cfg_module.update_device(cfg, device_id,
+                             alarm_brightness=brightness,
+                             alarm_color=alarm_color)
+    flash("Einstellungen gespeichert.", "success")
+    return redirect(url_for("devices"))
 
 
 @app.route("/devices/delete/<device_id>")

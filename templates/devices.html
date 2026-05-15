@@ -7,33 +7,68 @@
     <div class="card">
       <div class="card-header fw-bold"><i class="bi bi-plus-circle"></i> Shelly-Gerät hinzufügen</div>
       <div class="card-body">
-        <form method="post">
+        <form method="post" id="addForm">
           <div class="mb-3">
             <label class="form-label">Name</label>
-            <input type="text" class="form-control" name="name" placeholder="z.B. Garagentor-Licht" required>
+            <input type="text" class="form-control" name="name" placeholder="z.B. LED-Streifen Garage" required>
           </div>
           <div class="mb-3">
             <label class="form-label">IP-Adresse</label>
             <input type="text" class="form-control" name="ip" placeholder="192.168.1.100" required
                    pattern="^(\d{1,3}\.){3}\d{1,3}$">
-            <div class="form-text">Die lokale IP deines Shelly-Geräts im Netzwerk.</div>
           </div>
           <div class="mb-3">
             <label class="form-label">Typ</label>
-            <select class="form-select" name="type">
-              <option value="relay">Relay (Shelly 1, 2.5, Plug, …)</option>
-              <option value="light">Light (Shelly RGBW2, Bulb, …)</option>
+            <select class="form-select" name="type" id="addType" onchange="updateFields('add')">
+              <option value="relay">Relay — Shelly 1, 2.5, Plug</option>
+              <option value="light">Light — Shelly Bulb, Duo</option>
+              <option value="color">Color — Shelly RGBW2 (Farbmodus)</option>
+              <option value="white">White — Shelly RGBW2 (Weißkanal)</option>
             </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Kanal</label>
             <select class="form-select" name="channel">
               <option value="0">Kanal 0 (Standard)</option>
-              <option value="1">Kanal 1 (Shelly 2.5 zweiter Ausgang)</option>
+              <option value="1">Kanal 1</option>
+              <option value="2">Kanal 2</option>
+              <option value="3">Kanal 3</option>
             </select>
           </div>
+
+          <!-- Helligkeit (light, color, white) -->
+          <div class="mb-3 field-brightness" id="add-brightness" style="display:none">
+            <label class="form-label">Helligkeit bei Einsatz (%)</label>
+            <input type="range" class="form-range" name="alarm_brightness" min="1" max="100" value="100"
+                   oninput="this.nextElementSibling.textContent = this.value + '%'">
+            <span class="text-muted small">100%</span>
+          </div>
+
+          <!-- Farbe (color) -->
+          <div class="mb-3 field-color" id="add-color" style="display:none">
+            <label class="form-label">Farbe bei Einsatz</label>
+            <div class="d-flex align-items-center gap-3">
+              <input type="color" class="form-control form-control-color" name="alarm_color_hex" value="#ff0000" style="width:60px">
+              <span class="text-muted small">RGB-Farbe</span>
+            </div>
+          </div>
+          <div class="mb-3 field-white" id="add-white" style="display:none">
+            <label class="form-label">Warmweiß-Anteil (0–255)</label>
+            <input type="number" class="form-control" name="alarm_white" min="0" max="255" value="0">
+          </div>
+
           <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus"></i> Hinzufügen</button>
         </form>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-body small text-muted">
+        <strong>API-Endpunkte (Gen1):</strong><br>
+        Relay: <code>/relay/0?turn=on</code><br>
+        Light: <code>/light/0?turn=on&brightness=80</code><br>
+        Color: <code>/color/0?turn=on&red=255&green=0&blue=0&gain=100</code><br>
+        White: <code>/white/0?turn=on&brightness=80</code>
       </div>
     </div>
   </div>
@@ -45,18 +80,34 @@
       {% if cfg.shelly_devices %}
         <ul class="list-group list-group-flush">
           {% for dev in cfg.shelly_devices %}
+            {% set c = dev.alarm_color if dev.alarm_color else {} %}
+            {% set hex_color = "#{:02x}{:02x}{:02x}".format(c.get('red',255), c.get('green',0), c.get('blue',0)) %}
             <li class="list-group-item">
-              <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-start justify-content-between">
                 <div>
                   <strong>{{ dev.name }}</strong>
-                  <span class="badge bg-secondary ms-2">{{ dev.type }}</span>
+                  <span class="badge bg-secondary ms-1">{{ dev.type }}</span>
                   <span class="badge bg-light text-dark ms-1">Kanal {{ dev.channel }}</span>
-                  <div class="text-muted small mt-1"><i class="bi bi-hdd-network"></i> {{ dev.ip }}</div>
+                  <div class="text-muted small mt-1">
+                    <i class="bi bi-hdd-network"></i> {{ dev.ip }}
+                    {% if dev.type in ['light', 'white', 'color'] %}
+                      &nbsp;·&nbsp;<i class="bi bi-brightness-high"></i> {{ dev.alarm_brightness or 100 }}%
+                    {% endif %}
+                    {% if dev.type == 'color' %}
+                      &nbsp;·&nbsp;
+                      <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:{{ hex_color }};vertical-align:middle;border:1px solid #ccc"></span>
+                      {{ hex_color }}
+                      {% if c.get('white', 0) %}&nbsp;W:{{ c.white }}{% endif %}
+                    {% endif %}
+                  </div>
                 </div>
                 <div class="d-flex gap-2">
-                  <button class="btn btn-outline-secondary btn-sm"
-                          onclick="testDevice('{{ dev.id }}', this)">
-                    <i class="bi bi-wifi"></i> Test
+                  <button class="btn btn-outline-secondary btn-sm" onclick="testDevice('{{ dev.id }}', this)">
+                    <i class="bi bi-wifi"></i>
+                  </button>
+                  <button class="btn btn-outline-primary btn-sm" data-bs-toggle="collapse"
+                          data-bs-target="#edit_{{ dev.id }}">
+                    <i class="bi bi-pencil"></i>
                   </button>
                   <a href="/devices/delete/{{ dev.id }}"
                      onclick="return confirm('Gerät \'{{ dev.name }}\' wirklich entfernen?')"
@@ -65,6 +116,44 @@
                   </a>
                 </div>
               </div>
+
+              <!-- Inline-Edit (nur bei Licht/Farb-Typen) -->
+              {% if dev.type in ['light', 'white', 'color'] %}
+              <div class="collapse mt-3" id="edit_{{ dev.id }}">
+                <form method="post" action="/devices/edit/{{ dev.id }}" class="bg-light p-3 rounded">
+                  <div class="row g-2 align-items-end">
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold mb-1">Helligkeit bei Einsatz (%)</label>
+                      <input type="range" class="form-range" name="alarm_brightness"
+                             min="1" max="100" value="{{ dev.alarm_brightness or 100 }}"
+                             oninput="this.nextElementSibling.textContent = this.value + '%'">
+                      <span class="text-muted small">{{ dev.alarm_brightness or 100 }}%</span>
+                    </div>
+                    {% if dev.type == 'color' %}
+                    <div class="col-sm-6">
+                      <label class="form-label small fw-semibold mb-1">Farbe</label>
+                      <input type="color" class="form-control form-control-color w-100"
+                             name="alarm_color_hex" value="{{ hex_color }}">
+                    </div>
+                    <div class="col-sm-6">
+                      <label class="form-label small fw-semibold mb-1">Warmweiß (0–255)</label>
+                      <input type="number" class="form-control form-control-sm"
+                             name="alarm_white" min="0" max="255" value="{{ c.get('white', 0) }}">
+                    </div>
+                    {% else %}
+                    <input type="hidden" name="alarm_color_hex" value="{{ hex_color }}">
+                    <input type="hidden" name="alarm_white" value="{{ c.get('white', 0) }}">
+                    {% endif %}
+                    <div class="col-12">
+                      <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-save"></i> Speichern
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              {% endif %}
+
               <div id="test_{{ dev.id }}" class="mt-2 small"></div>
             </li>
           {% endfor %}
@@ -73,15 +162,6 @@
         <div class="card-body text-muted">Noch keine Geräte konfiguriert.</div>
       {% endif %}
     </div>
-
-    <div class="card mt-3">
-      <div class="card-body">
-        <h6 class="fw-bold"><i class="bi bi-info-circle"></i> Shelly Gen1 API-Endpunkte</h6>
-        <p class="text-muted small mb-1">Relay ein: <code>http://&lt;IP&gt;/relay/0?turn=on</code></p>
-        <p class="text-muted small mb-1">Relay aus: <code>http://&lt;IP&gt;/relay/0?turn=off</code></p>
-        <p class="text-muted small mb-0">Light ein: <code>http://&lt;IP&gt;/light/0?turn=on</code></p>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -89,6 +169,15 @@
 
 {% block scripts %}
 <script>
+function updateFields(prefix) {
+  const type = document.getElementById(prefix + 'Type').value;
+  const showBrightness = ['light', 'white', 'color'].includes(type);
+  const showColor = type === 'color';
+  document.getElementById(prefix + '-brightness').style.display = showBrightness ? '' : 'none';
+  document.getElementById(prefix + '-color').style.display = showColor ? '' : 'none';
+  document.getElementById(prefix + '-white').style.display = showColor ? '' : 'none';
+}
+
 function testDevice(id, btn) {
   const out = document.getElementById('test_' + id);
   btn.disabled = true;
@@ -97,13 +186,17 @@ function testDevice(id, btn) {
     .then(r => r.json())
     .then(d => {
       if (d.ok) {
-        out.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Erreichbar — Zustand: ' +
-          (d.status?.ison !== undefined ? (d.status.ison ? 'AN' : 'AUS') : JSON.stringify(d.status)) + '</span>';
+        const s = d.status;
+        let info = s.ison !== undefined ? (s.ison ? 'AN' : 'AUS') : '';
+        if (s.brightness !== undefined) info += ` · ${s.brightness}%`;
+        if (s.gain !== undefined) info += ` · Gain ${s.gain}%`;
+        if (s.red !== undefined) info += ` · RGB(${s.red},${s.green},${s.blue})`;
+        out.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Erreichbar — ${info}</span>`;
       } else {
-        out.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ' + d.error + '</span>';
+        out.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${d.error}</span>`;
       }
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-wifi"></i> Test';
+      btn.innerHTML = '<i class="bi bi-wifi"></i>';
     });
 }
 </script>
