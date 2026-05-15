@@ -25,10 +25,11 @@
 <nav class="navbar navbar-expand-lg mb-4">
   <div class="container">
     <a class="navbar-brand fw-bold" href="/"><i class="bi bi-fire"></i> Divera → Shelly</a>
-    <div class="navbar-nav ms-auto flex-row gap-3">
+    <div class="navbar-nav ms-auto flex-row gap-3 align-items-center">
       <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Dashboard</a>
       <a class="nav-link {% if request.path == '/devices' %}active{% endif %}" href="/devices">Geräte</a>
       <a class="nav-link {% if request.path == '/settings' %}active{% endif %}" href="/settings">Einstellungen</a>
+      <a class="nav-link" href="/logout" title="Abmelden"><i class="bi bi-box-arrow-right"></i></a>
     </div>
   </div>
 </nav>

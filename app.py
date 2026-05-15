@@ -1,10 +1,11 @@
 import logging
 import threading
-import time
 from datetime import datetime
+from functools import wraps
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import config as cfg_module
 import divera
@@ -14,7 +15,16 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(mes
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = "divera-shelly-secret"
+app.secret_key = "divera-shelly-secret-2024"
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login", next=request.path))
+        return f(*args, **kwargs)
+    return decorated
 
 # In-memory state
 state = {
@@ -155,7 +165,33 @@ def poll_divera():
 
 # ─── Routes ────────────────────────────────────────────────────────────────────
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("logged_in"):
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        cfg = cfg_module.load()
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        stored_hash = cfg.get("password_hash", "")
+        stored_user = cfg.get("username", "admin")
+        if username == stored_user and stored_hash and check_password_hash(stored_hash, password):
+            session["logged_in"] = True
+            session["username"] = username
+            log.info("Login erfolgreich: %s", username)
+            return redirect(request.args.get("next") or url_for("index"))
+        flash("Benutzername oder Passwort falsch.", "danger")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
 @app.route("/")
+@login_required
 def index():
     cfg = cfg_module.load()
     devices = cfg.get("shelly_devices", [])
@@ -170,20 +206,40 @@ def index():
 
 
 @app.route("/settings", methods=["GET", "POST"])
+@login_required
 def settings():
     cfg = cfg_module.load()
     if request.method == "POST":
-        cfg["divera_access_key"] = request.form.get("access_key", "").strip()
-        cfg["poll_interval"] = max(10, int(request.form.get("poll_interval", 30)))
-        cfg["auto_off_seconds"] = max(0, int(request.form.get("auto_off_seconds", 0)))
-        cfg_module.save(cfg)
-        _restart_scheduler(cfg["poll_interval"])
-        flash("Einstellungen gespeichert.", "success")
+        action = request.form.get("action")
+        if action == "password":
+            new_user = request.form.get("new_username", "").strip()
+            new_pw = request.form.get("new_password", "")
+            confirm_pw = request.form.get("confirm_password", "")
+            if not new_user:
+                flash("Benutzername darf nicht leer sein.", "danger")
+            elif new_pw != confirm_pw:
+                flash("Passwörter stimmen nicht überein.", "danger")
+            elif len(new_pw) < 4:
+                flash("Passwort muss mindestens 4 Zeichen lang sein.", "danger")
+            else:
+                cfg["username"] = new_user
+                cfg["password_hash"] = generate_password_hash(new_pw)
+                cfg_module.save(cfg)
+                session["username"] = new_user
+                flash("Zugangsdaten gespeichert.", "success")
+        else:
+            cfg["divera_access_key"] = request.form.get("access_key", "").strip()
+            cfg["poll_interval"] = max(10, int(request.form.get("poll_interval", 30)))
+            cfg["auto_off_seconds"] = max(0, int(request.form.get("auto_off_seconds", 0)))
+            cfg_module.save(cfg)
+            _restart_scheduler(cfg["poll_interval"])
+            flash("Einstellungen gespeichert.", "success")
         return redirect(url_for("settings"))
     return render_template("settings.html", cfg=cfg, state=state)
 
 
 @app.route("/devices", methods=["GET", "POST"])
+@login_required
 def devices():
     cfg = cfg_module.load()
     if request.method == "POST":
@@ -201,6 +257,7 @@ def devices():
 
 
 @app.route("/devices/delete/<device_id>")
+@login_required
 def delete_device(device_id):
     cfg = cfg_module.load()
     cfg_module.remove_device(cfg, device_id)
@@ -209,6 +266,7 @@ def delete_device(device_id):
 
 
 @app.route("/devices/test/<device_id>")
+@login_required
 def test_device(device_id):
     cfg = cfg_module.load()
     dev = cfg_module.get_device(cfg, device_id)
@@ -219,6 +277,7 @@ def test_device(device_id):
 
 
 @app.route("/lights/select", methods=["POST"])
+@login_required
 def select_lights():
     cfg = cfg_module.load()
     cfg["selected_lights"] = request.form.getlist("lights")
@@ -228,6 +287,7 @@ def select_lights():
 
 
 @app.route("/lights/on")
+@login_required
 def manual_on():
     cfg = cfg_module.load()
     _trigger_lights({"title": "Manuell", "text": ""}, cfg)
@@ -236,6 +296,7 @@ def manual_on():
 
 
 @app.route("/lights/off")
+@login_required
 def manual_off():
     _turn_off_all_lights()
     flash("Lichter ausgeschaltet.", "success")
@@ -243,6 +304,7 @@ def manual_off():
 
 
 @app.route("/api/state")
+@login_required
 def api_state():
     cfg = cfg_module.load()
     return jsonify({
@@ -268,5 +330,10 @@ def _restart_scheduler(interval):
 
 if __name__ == "__main__":
     cfg = cfg_module.load()
+    if not cfg.get("password_hash"):
+        cfg["username"] = "admin"
+        cfg["password_hash"] = generate_password_hash("admin")
+        cfg_module.save(cfg)
+        log.info("Standardpasswort gesetzt: admin / admin — bitte in den Einstellungen ändern!")
     _restart_scheduler(cfg.get("poll_interval", 30))
     app.run(host="0.0.0.0", port=5000, debug=False)
