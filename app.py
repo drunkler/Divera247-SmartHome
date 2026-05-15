@@ -1,4 +1,7 @@
 import logging
+import os
+import subprocess
+import sys
 import threading
 from datetime import datetime
 from functools import wraps
@@ -352,6 +355,57 @@ def api_state():
         "poll_error": state["poll_error"],
         "last_alarm_id": cfg.get("last_alarm_id"),
     })
+
+
+# ─── Update ────────────────────────────────────────────────────────────────────
+
+def _git(*args):
+    result = subprocess.run(
+        ["git"] + list(args),
+        cwd=os.path.dirname(__file__),
+        capture_output=True, text=True
+    )
+    return result.stdout.strip(), result.returncode
+
+
+@app.route("/update/check")
+@login_required
+def update_check():
+    local, rc = _git("rev-parse", "HEAD")
+    if rc != 0:
+        return jsonify({"ok": False, "error": "Kein Git-Repository gefunden."})
+
+    _, rc = _git("fetch", "origin", "--quiet")
+    if rc != 0:
+        return jsonify({"ok": False, "error": "Fetch fehlgeschlagen. Netzwerk prüfen."})
+
+    remote, _ = _git("rev-parse", "origin/master")
+    behind, _ = _git("rev-list", "--count", f"HEAD..origin/master")
+
+    return jsonify({
+        "ok": True,
+        "local":   local[:7],
+        "remote":  remote[:7],
+        "up_to_date": local == remote,
+        "commits_behind": int(behind or 0),
+    })
+
+
+@app.route("/update/apply", methods=["POST"])
+@login_required
+def update_apply():
+    out, rc = _git("pull", "origin", "master")
+    if rc != 0:
+        return jsonify({"ok": False, "error": out or "git pull fehlgeschlagen."})
+
+    log.info("Update eingespielt: %s — starte neu...", out)
+    threading.Timer(1.5, _restart_process).start()
+    return jsonify({"ok": True, "output": out})
+
+
+def _restart_process():
+    log.info("Server-Neustart nach Update...")
+    os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 # ─── Scheduler ─────────────────────────────────────────────────────────────────
