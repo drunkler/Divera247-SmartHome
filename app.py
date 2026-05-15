@@ -343,6 +343,25 @@ def manual_off():
     return redirect(url_for("index"))
 
 
+@app.route("/api/divera-debug")
+@login_required
+def api_divera_debug():
+    cfg = cfg_module.load()
+    key = cfg.get("divera_access_key", "").strip()
+    if not key:
+        return jsonify({"ok": False, "error": "Kein API-Key konfiguriert."})
+    try:
+        import requests as req
+        resp = req.get(
+            "https://www.divera247.com/api/last-alarm",
+            params={"accesskey": key},
+            timeout=10,
+        )
+        return jsonify({"ok": True, "status_code": resp.status_code, "data": resp.json()})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
 @app.route("/api/state")
 @login_required
 def api_state():

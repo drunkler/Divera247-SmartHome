@@ -122,15 +122,85 @@
 </div>
 {% endif %}
 
+<!-- Divera Debug -->
+<div class="card mt-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-bold"><i class="bi bi-bug"></i> Divera Debug — Aktive Einsätze</span>
+    <button class="btn btn-outline-secondary btn-sm" onclick="loadDebug(this)">
+      <i class="bi bi-arrow-repeat"></i> Abrufen
+    </button>
+  </div>
+  <div class="card-body p-0">
+    <div id="debug-out" class="p-3 text-muted small">Klicke auf "Abrufen" um die aktuelle Divera-API-Antwort zu laden.</div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // Auto-refresh Status alle 15 Sekunden
-  setInterval(() => {
-    fetch('/api/state').then(r => r.json()).then(s => {
-      const dot = document.querySelector('.status-dot:first-child');
+function loadDebug(btn) {
+  const out = document.getElementById('debug-out');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  out.innerHTML = '<span class="text-muted">Lade...</span>';
+
+  fetch('/api/divera-debug')
+    .then(r => r.json())
+    .then(d => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Abrufen';
+
+      if (!d.ok) {
+        out.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${d.error}</span>`;
+        return;
+      }
+
+      const data = d.data;
+      const success = data?.success;
+      const alarm = data?.data;
+
+      if (!success || !alarm || !alarm.id) {
+        out.innerHTML = `
+          <div class="alert alert-warning mb-0 rounded-0 border-0">
+            <i class="bi bi-info-circle"></i> Divera meldet <strong>keinen aktiven Einsatz</strong>
+            ${!success && data?.error ? `<br><small class="text-muted">${data.error}</small>` : ''}
+          </div>`;
+        return;
+      }
+
+      const ts = alarm.date ? new Date(alarm.date * 1000).toLocaleString('de-DE') : '—';
+      const fields = [
+        ['ID',        alarm.id],
+        ['Titel',     alarm.title || '—'],
+        ['Stichwort', alarm.text || '—'],
+        ['Adresse',   alarm.address || '—'],
+        ['Datum',     ts],
+        ['Koordinaten', alarm.lat ? `${alarm.lat}, ${alarm.lng}` : '—'],
+      ];
+
+      const rows = fields.map(([k, v]) =>
+        `<tr><td class="text-muted pe-3" style="white-space:nowrap">${k}</td><td><strong>${v}</strong></td></tr>`
+      ).join('');
+
+      out.innerHTML = `
+        <div class="p-3 border-bottom">
+          <span class="badge bg-danger me-2">Einsatz aktiv</span>
+          <span class="text-muted small">HTTP ${d.status_code}</span>
+        </div>
+        <div class="p-3">
+          <table class="table table-sm table-borderless mb-3">${rows}</table>
+          <details>
+            <summary class="text-muted small" style="cursor:pointer">Rohdaten (JSON)</summary>
+            <pre class="mt-2 p-2 bg-light rounded small" style="max-height:300px;overflow:auto">${JSON.stringify(data, null, 2)}</pre>
+          </details>
+        </div>`;
+    })
+    .catch(e => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Abrufen';
+      out.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> Verbindungsfehler: ${e}</span>`;
     });
-  }, 15000);
+}
 </script>
 {% endblock %}
