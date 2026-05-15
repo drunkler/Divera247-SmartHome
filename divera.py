@@ -22,19 +22,19 @@ def fetch_alarms(access_key):
         raise ValueError("Divera API: success=false")
 
     inner = data.get("data", {})
-    if not isinstance(inner, dict):
-        raise ValueError(f"data-Feld ist kein dict: {type(inner).__name__}")
 
-    alarms_block = inner.get("alarms", {})
-    if not isinstance(alarms_block, dict):
-        raise ValueError(f"alarms-Feld ist kein dict: {type(alarms_block).__name__}")
-
-    items = alarms_block.get("items", {})
-
-    if isinstance(items, dict):
-        alarms = list(items.values())
-    elif isinstance(items, list):
-        alarms = items
+    if isinstance(inner, list):
+        # Divera gibt data direkt als Alarmliste zurück
+        alarms = inner
+    elif isinstance(inner, dict):
+        alarms_block = inner.get("alarms", {})
+        items = alarms_block.get("items", {}) if isinstance(alarms_block, dict) else alarms_block
+        if isinstance(items, dict):
+            alarms = list(items.values())
+        elif isinstance(items, list):
+            alarms = items
+        else:
+            alarms = []
     else:
         alarms = []
 
