@@ -12,6 +12,9 @@ DEFAULT_CONFIG = {
     "selected_lights": [],
     "auto_off_seconds": 0,
     "last_alarm_id": None,
+    "ha_url": "",
+    "ha_token": "",
+    "ha_selected_entities": [],
 }
 
 

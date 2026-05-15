@@ -12,6 +12,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import config as cfg_module
 import divera
+import ha as ha_module
 import shelly
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
@@ -76,6 +77,23 @@ def _trigger_lights(alarm, cfg):
         except Exception as e:
             log.error("Fehler beim Einschalten von %s: %s", dev["name"], e)
 
+    # Home Assistant Geräte
+    ha_url = cfg.get("ha_url", "").strip()
+    ha_token = cfg.get("ha_token", "").strip()
+    if ha_url and ha_token:
+        for entity_id in cfg.get("ha_selected_entities", []):
+            saved_state = {"state": "off", "attributes": {}}
+            try:
+                saved_state = ha_module.get_state(ha_url, ha_token, entity_id)
+            except Exception:
+                pass
+            try:
+                ha_module.turn_on(ha_url, ha_token, entity_id)
+                restore_list.append({"source": "ha", "entity_id": entity_id, "saved_state": saved_state})
+                log.info("HA Entität AN: %s", entity_id)
+            except Exception as e:
+                log.error("Fehler beim Einschalten von HA-Entität %s: %s", entity_id, e)
+
     _alarm_restore_list = restore_list
     state["lights_on"] = True
     state["lights_on_since"] = datetime.now().strftime("%H:%M:%S")
@@ -95,17 +113,27 @@ def _restore_alarm_lights():
     global _alarm_restore_list
     cfg = cfg_module.load()
     devices = {d["id"]: d for d in cfg.get("shelly_devices", [])}
+    ha_url = cfg.get("ha_url", "").strip()
+    ha_token = cfg.get("ha_token", "").strip()
     for entry in _alarm_restore_list:
-        dev = devices.get(entry["dev_id"])
-        if not dev:
-            continue
+        source = entry.get("source", "shelly")
         saved = entry["saved_state"]
-        try:
-            shelly.restore_state(dev, saved)
-            was_on = saved.get("ison", False)
-            log.info("Restore: %s → %s", dev["name"], "AN (Originalzustand)" if was_on else "AUS")
-        except Exception as e:
-            log.error("Fehler beim Restore von %s: %s", dev["name"], e)
+        if source == "ha":
+            try:
+                ha_module.restore_state(ha_url, ha_token, entry["entity_id"], saved)
+                log.info("HA Restore: %s → %s", entry["entity_id"], saved.get("state", "?"))
+            except Exception as e:
+                log.error("Fehler beim HA-Restore von %s: %s", entry["entity_id"], e)
+        else:
+            dev = devices.get(entry["dev_id"])
+            if not dev:
+                continue
+            try:
+                shelly.restore_state(dev, saved)
+                was_on = saved.get("ison", False)
+                log.info("Restore: %s → %s", dev["name"], "AN (Originalzustand)" if was_on else "AUS")
+            except Exception as e:
+                log.error("Fehler beim Restore von %s: %s", dev["name"], e)
     _alarm_restore_list = []
     state["lights_on"] = False
 
@@ -128,6 +156,15 @@ def _turn_off_all_lights():
             log.info("Licht AUS (manuell): %s", dev["name"])
         except Exception as e:
             log.error("Fehler beim Ausschalten von %s: %s", dev["name"], e)
+    ha_url = cfg.get("ha_url", "").strip()
+    ha_token = cfg.get("ha_token", "").strip()
+    if ha_url and ha_token:
+        for entity_id in cfg.get("ha_selected_entities", []):
+            try:
+                ha_module.turn_off(ha_url, ha_token, entity_id)
+                log.info("HA AUS (manuell): %s", entity_id)
+            except Exception as e:
+                log.error("Fehler beim HA-Ausschalten von %s: %s", entity_id, e)
     state["lights_on"] = False
 
 
@@ -237,6 +274,11 @@ def settings():
                 cfg_module.save(cfg)
                 session["username"] = new_user
                 flash("Zugangsdaten gespeichert.", "success")
+        elif action == "ha":
+            cfg["ha_url"] = request.form.get("ha_url", "").strip().rstrip("/")
+            cfg["ha_token"] = request.form.get("ha_token", "").strip()
+            cfg_module.save(cfg)
+            flash("Home Assistant Einstellungen gespeichert.", "success")
         else:
             cfg["divera_access_key"] = request.form.get("access_key", "").strip()
             cfg["divera_key_type"] = request.form.get("key_type", "org")
@@ -347,6 +389,31 @@ def manual_on():
 def manual_off():
     _turn_off_all_lights()
     flash("Lichter ausgeschaltet.", "success")
+    return redirect(url_for("index"))
+
+
+@app.route("/api/ha-entities")
+@login_required
+def api_ha_entities():
+    cfg = cfg_module.load()
+    ha_url = cfg.get("ha_url", "").strip()
+    ha_token = cfg.get("ha_token", "").strip()
+    if not ha_url or not ha_token:
+        return jsonify({"ok": False, "error": "Home Assistant nicht konfiguriert."})
+    try:
+        entities = ha_module.get_entities(ha_url, ha_token)
+        return jsonify({"ok": True, "entities": entities})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/ha/select", methods=["POST"])
+@login_required
+def ha_select():
+    cfg = cfg_module.load()
+    cfg["ha_selected_entities"] = request.form.getlist("ha_entities")
+    cfg_module.save(cfg)
+    flash("HA-Auswahl gespeichert.", "success")
     return redirect(url_for("index"))
 
 

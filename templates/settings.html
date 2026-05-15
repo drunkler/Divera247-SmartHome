@@ -103,6 +103,42 @@
       </div>
     </div>
 
+    <!-- Home Assistant -->
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-house-heart-fill"></i> Home Assistant</div>
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="action" value="ha">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">HOME ASSISTANT URL</label>
+            <input type="text" class="form-control font-monospace" name="ha_url"
+                   value="{{ cfg.ha_url }}" placeholder="http://homeassistant.local:8123"
+                   style="border-radius:8px;font-size:.83rem">
+            <div class="form-text"><i class="bi bi-info-circle"></i> Interne IP oder Hostname, Port 8123</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">LONG-LIVED ACCESS TOKEN</label>
+            <input type="password" class="form-control font-monospace" name="ha_token"
+                   value="{{ cfg.ha_token }}" placeholder="Token aus HA Profil → Sicherheit"
+                   style="border-radius:8px;font-size:.83rem" autocomplete="new-password">
+            <div class="form-text">
+              <i class="bi bi-info-circle"></i>
+              HA → <strong>Profil → Sicherheit → Langlebige Zugangstokens → Token erstellen</strong>
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-fill" style="border-radius:8px;font-weight:600">
+              <i class="bi bi-save"></i> Speichern
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="testHa(this)" style="border-radius:8px">
+              <i class="bi bi-plug"></i> Verbindung testen
+            </button>
+          </div>
+          <div id="ha-test-result" class="mt-2 small"></div>
+        </form>
+      </div>
+    </div>
+
     <!-- Software-Update -->
     <div class="card mb-4">
       <div class="card-header"><i class="bi bi-cloud-arrow-down"></i> Software-Update</div>
@@ -139,6 +175,28 @@ function updateKeyHint() {
   const personal = document.getElementById('kt_personal').checked;
   document.getElementById('key-hint-org').style.display     = personal ? 'none' : '';
   document.getElementById('key-hint-personal').style.display = personal ? '' : 'none';
+}
+
+function testHa(btn) {
+  const result = document.getElementById('ha-test-result');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  fetch('/api/ha-entities')
+    .then(r => r.json())
+    .then(d => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-plug"></i> Verbindung testen';
+      if (d.ok) {
+        result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Verbunden — ${d.entities.length} Entität${d.entities.length !== 1 ? 'en' : ''} gefunden</span>`;
+      } else {
+        result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${d.error}</span>`;
+      }
+    })
+    .catch(e => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-plug"></i> Verbindung testen';
+      result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${e}</span>`;
+    });
 }
 </script>
 <script>
