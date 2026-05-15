@@ -10,7 +10,7 @@ import config as cfg_module
 import divera
 import shelly
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
