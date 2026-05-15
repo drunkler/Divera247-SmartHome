@@ -138,7 +138,8 @@ def poll_divera():
         return
 
     try:
-        latest = divera.fetch_last_alarm(key)
+        key_type = cfg.get("divera_key_type", "org")
+        latest = divera.fetch_alarm(key, key_type)
         state["poll_error"] = None
 
         if not latest:
@@ -233,6 +234,7 @@ def settings():
                 flash("Zugangsdaten gespeichert.", "success")
         else:
             cfg["divera_access_key"] = request.form.get("access_key", "").strip()
+            cfg["divera_key_type"] = request.form.get("key_type", "org")
             cfg["poll_interval"] = max(10, int(request.form.get("poll_interval", 30)))
             cfg["auto_off_seconds"] = max(0, int(request.form.get("auto_off_seconds", 0)))
             cfg_module.save(cfg)
@@ -350,14 +352,16 @@ def api_divera_debug():
     key = cfg.get("divera_access_key", "").strip()
     if not key:
         return jsonify({"ok": False, "error": "Kein API-Key konfiguriert."})
+    key_type = cfg.get("divera_key_type", "org")
+    endpoint = (
+        "https://www.divera247.com/api/v2/pull/all"
+        if key_type == "personal"
+        else "https://www.divera247.com/api/last-alarm"
+    )
     try:
         import requests as req
-        resp = req.get(
-            "https://www.divera247.com/api/last-alarm",
-            params={"accesskey": key},
-            timeout=10,
-        )
-        return jsonify({"ok": True, "status_code": resp.status_code, "data": resp.json()})
+        resp = req.get(endpoint, params={"accesskey": key}, timeout=10)
+        return jsonify({"ok": True, "status_code": resp.status_code, "data": resp.json(), "key_type": key_type})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 

@@ -11,15 +11,37 @@
         <form method="post">
           <input type="hidden" name="action" value="general">
 
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">KEY-TYP</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="key_type" id="kt_org" value="org"
+                       {% if cfg.divera_key_type != 'personal' %}checked{% endif %}
+                       onchange="updateKeyHint()">
+                <label class="form-check-label" for="kt_org" style="font-size:.85rem">Organisations-Key</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="key_type" id="kt_personal" value="personal"
+                       {% if cfg.divera_key_type == 'personal' %}checked{% endif %}
+                       onchange="updateKeyHint()">
+                <label class="form-check-label" for="kt_personal" style="font-size:.85rem">Persönlicher Key</label>
+              </div>
+            </div>
+          </div>
+
           <div class="mb-4">
             <label class="form-label fw-semibold" style="font-size:.8rem;color:#374151">DIVERA 247 ACCESS-KEY</label>
             <input type="text" class="form-control font-monospace" name="access_key"
                    value="{{ cfg.divera_access_key }}" placeholder="API-Key eintragen…"
                    style="border-radius:8px;font-size:.83rem">
-            <div class="form-text mt-1">
+            <div class="form-text mt-1" id="key-hint-org" {% if cfg.divera_key_type == 'personal' %}style="display:none"{% endif %}>
               <i class="bi bi-info-circle"></i>
               Organisations-Key aus <strong>Divera → Verwaltung → Einstellungen → Schnittstellen → API</strong>
-              <br><span class="text-danger small">Nicht der persönliche Account-Key!</span>
+            </div>
+            <div class="form-text mt-1" id="key-hint-personal" {% if cfg.divera_key_type != 'personal' %}style="display:none"{% endif %}>
+              <i class="bi bi-info-circle"></i>
+              Persönlicher Key aus <strong>Divera → Mein Konto → Einstellungen → API</strong>
+              (app.divera247.com/account/einstellungen.html)
             </div>
           </div>
 
@@ -112,6 +134,13 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+function updateKeyHint() {
+  const personal = document.getElementById('kt_personal').checked;
+  document.getElementById('key-hint-org').style.display     = personal ? 'none' : '';
+  document.getElementById('key-hint-personal').style.display = personal ? '' : 'none';
+}
+</script>
 <script>
 function checkUpdate() {
   const btn = document.getElementById('btn-check');

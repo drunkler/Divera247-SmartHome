@@ -6,6 +6,7 @@ CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
 DEFAULT_CONFIG = {
     "divera_access_key": "",
+    "divera_key_type": "org",
     "poll_interval": 30,
     "shelly_devices": [],
     "selected_lights": [],
