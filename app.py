@@ -253,22 +253,25 @@ def devices():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         ip = request.form.get("ip", "").strip()
-        dev_type = request.form.get("type", "relay")
+        model = request.form.get("model", "shelly1")
         channel = request.form.get("channel", 0)
         brightness = request.form.get("alarm_brightness", 100)
         color_hex = request.form.get("alarm_color_hex", "#ff0000")
         white = int(request.form.get("alarm_white", 0))
+        color_temp = int(request.form.get("alarm_color_temp", 4000))
         if name and ip:
             alarm_color = _color_from_hex(color_hex)
             alarm_color["white"] = white
-            cfg_module.add_device(cfg, name, ip, dev_type, channel,
+            cfg_module.add_device(cfg, name, ip, model, channel,
                                   alarm_brightness=brightness,
-                                  alarm_color=alarm_color)
+                                  alarm_color=alarm_color,
+                                  alarm_color_temp=color_temp)
             flash(f"Gerät '{name}' hinzugefügt.", "success")
         else:
             flash("Name und IP sind Pflichtfelder.", "danger")
         return redirect(url_for("devices"))
-    return render_template("devices.html", cfg=cfg, state=state)
+    from shelly import MODELS
+    return render_template("devices.html", cfg=cfg, state=state, shelly_models=MODELS)
 
 
 @app.route("/devices/edit/<device_id>", methods=["POST"])
@@ -278,11 +281,13 @@ def edit_device(device_id):
     brightness = int(request.form.get("alarm_brightness", 100))
     color_hex = request.form.get("alarm_color_hex", "#ff0000")
     white = int(request.form.get("alarm_white", 0))
+    color_temp = int(request.form.get("alarm_color_temp", 4000))
     alarm_color = _color_from_hex(color_hex)
     alarm_color["white"] = white
     cfg_module.update_device(cfg, device_id,
                              alarm_brightness=brightness,
-                             alarm_color=alarm_color)
+                             alarm_color=alarm_color,
+                             alarm_color_temp=color_temp)
     flash("Einstellungen gespeichert.", "success")
     return redirect(url_for("devices"))
 

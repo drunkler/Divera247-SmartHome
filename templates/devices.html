@@ -1,11 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
 
+{# Modell-Daten für JS #}
+<script>
+const MODELS = {
+  {% for key, (api_type, max_ch, label) in shelly_models.items() %}
+  "{{ key }}": { type: "{{ api_type }}", channels: {{ max_ch }}, label: "{{ label }}" },
+  {% endfor %}
+};
+</script>
+
 <div class="row g-4">
   <!-- Gerät hinzufügen -->
   <div class="col-lg-5">
     <div class="card">
-      <div class="card-header fw-bold"><i class="bi bi-plus-circle"></i> Shelly-Gerät hinzufügen</div>
+      <div class="card-header fw-bold"><i class="bi bi-plus-circle"></i> Gerät hinzufügen</div>
       <div class="card-body">
         <form method="post" id="addForm">
           <div class="mb-3">
@@ -18,57 +27,91 @@
                    pattern="^(\d{1,3}\.){3}\d{1,3}$">
           </div>
           <div class="mb-3">
-            <label class="form-label">Typ</label>
-            <select class="form-select" name="type" id="addType" onchange="updateFields('add')">
-              <option value="relay">Relay — Shelly 1, 2.5, Plug</option>
-              <option value="light">Light — Shelly Bulb, Duo</option>
-              <option value="color">Color — Shelly RGBW2 (Farbmodus)</option>
-              <option value="white">White — Shelly RGBW2 (Weißkanal)</option>
+            <label class="form-label">Gerätemodell</label>
+            <select class="form-select" name="model" id="addModel" onchange="onModelChange('add')">
+              <optgroup label="Relay (Ein/Aus)">
+                <option value="shelly1">Shelly 1 / 1PM</option>
+                <option value="shelly2">Shelly 2 / 2.5</option>
+                <option value="shelly4pro">Shelly 4Pro</option>
+                <option value="plug">Shelly Plug / Plug S</option>
+                <option value="uni">Shelly UNI</option>
+              </optgroup>
+              <optgroup label="Dimmer (Helligkeit)">
+                <option value="dimmer">Shelly Dimmer 1 / 2</option>
+                <option value="vintage">Shelly Vintage</option>
+              </optgroup>
+              <optgroup label="Weißlicht (Helligkeit + Farbtemperatur)">
+                <option value="duo">Shelly Duo</option>
+              </optgroup>
+              <optgroup label="RGB / RGBW (Farbe)">
+                <option value="bulb">Shelly Bulb</option>
+                <option value="rgbw2_color">Shelly RGBW2 – Farbmodus</option>
+              </optgroup>
+              <optgroup label="Weißkanal">
+                <option value="rgbw2_white">Shelly RGBW2 – Weißkanal</option>
+              </optgroup>
             </select>
           </div>
-          <div class="mb-3">
+          <div class="mb-3" id="add-channel-wrap">
             <label class="form-label">Kanal</label>
-            <select class="form-select" name="channel">
-              <option value="0">Kanal 0 (Standard)</option>
-              <option value="1">Kanal 1</option>
-              <option value="2">Kanal 2</option>
-              <option value="3">Kanal 3</option>
-            </select>
+            <select class="form-select" name="channel" id="addChannel"></select>
+            <div class="form-text" id="add-channel-hint"></div>
           </div>
 
-          <!-- Helligkeit (light, color, white) -->
-          <div class="mb-3 field-brightness" id="add-brightness" style="display:none">
+          <!-- Helligkeit -->
+          <div class="mb-3" id="add-brightness" style="display:none">
             <label class="form-label">Helligkeit bei Einsatz (%)</label>
-            <input type="range" class="form-range" name="alarm_brightness" min="1" max="100" value="100"
-                   oninput="this.nextElementSibling.textContent = this.value + '%'">
-            <span class="text-muted small">100%</span>
-          </div>
-
-          <!-- Farbe (color) -->
-          <div class="mb-3 field-color" id="add-color" style="display:none">
-            <label class="form-label">Farbe bei Einsatz</label>
             <div class="d-flex align-items-center gap-3">
-              <input type="color" class="form-control form-control-color" name="alarm_color_hex" value="#ff0000" style="width:60px">
-              <span class="text-muted small">RGB-Farbe</span>
+              <input type="range" class="form-range" name="alarm_brightness" min="1" max="100" value="100"
+                     oninput="document.getElementById('add-bval').textContent=this.value+'%'">
+              <span id="add-bval" class="text-muted small" style="min-width:40px">100%</span>
             </div>
           </div>
-          <div class="mb-3 field-white" id="add-white" style="display:none">
-            <label class="form-label">Warmweiß-Anteil (0–255)</label>
-            <input type="number" class="form-control" name="alarm_white" min="0" max="255" value="0">
+
+          <!-- Farbtemperatur (Duo) -->
+          <div class="mb-3" id="add-kelvin" style="display:none">
+            <label class="form-label">Farbtemperatur bei Einsatz (Kelvin)</label>
+            <div class="d-flex align-items-center gap-3">
+              <input type="range" class="form-range" name="alarm_color_temp" min="3000" max="6500" step="100" value="4000"
+                     oninput="document.getElementById('add-kval').textContent=this.value+'K'">
+              <span id="add-kval" class="text-muted small" style="min-width:50px">4000K</span>
+            </div>
+            <div class="d-flex justify-content-between form-text mt-1">
+              <span>🟡 3000K warm</span><span>⚪ 6500K kalt</span>
+            </div>
           </div>
 
-          <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus"></i> Hinzufügen</button>
+          <!-- RGB-Farbe -->
+          <div id="add-color" style="display:none">
+            <div class="mb-3">
+              <label class="form-label">Farbe bei Einsatz (RGB)</label>
+              <div class="d-flex align-items-center gap-3">
+                <input type="color" class="form-control form-control-color" name="alarm_color_hex" value="#ff0000" style="width:60px">
+                <span class="text-muted small">Klick zum Ändern</span>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Warmweiß-Kanal (W, 0–255)</label>
+              <input type="number" class="form-control" name="alarm_white" min="0" max="255" value="0">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 mt-1"><i class="bi bi-plus"></i> Hinzufügen</button>
         </form>
       </div>
     </div>
 
+    <!-- API-Referenz -->
     <div class="card mt-3">
       <div class="card-body small text-muted">
-        <strong>API-Endpunkte (Gen1):</strong><br>
-        Relay: <code>/relay/0?turn=on</code><br>
-        Light: <code>/light/0?turn=on&brightness=80</code><br>
-        Color: <code>/color/0?turn=on&red=255&green=0&blue=0&gain=100</code><br>
-        White: <code>/white/0?turn=on&brightness=80</code>
+        <strong class="text-dark">Shelly Gen1 Endpunkte:</strong>
+        <table class="table table-sm table-borderless mb-0 mt-1 small">
+          <tr><td>Relay</td><td><code>/relay/0?turn=on</code></td></tr>
+          <tr><td>Dimmer</td><td><code>/light/0?turn=on&brightness=80</code></td></tr>
+          <tr><td>Duo</td><td><code>/light/0?turn=on&brightness=80&kelvin=4000</code></td></tr>
+          <tr><td>Color</td><td><code>/color/0?turn=on&red=255&green=0&blue=0&gain=100</code></td></tr>
+          <tr><td>White</td><td><code>/white/0?turn=on&brightness=80</code></td></tr>
+        </table>
       </div>
     </div>
   </div>
@@ -80,69 +123,93 @@
       {% if cfg.shelly_devices %}
         <ul class="list-group list-group-flush">
           {% for dev in cfg.shelly_devices %}
+            {% set api_type = dev.api_type or dev.type %}
             {% set c = dev.alarm_color if dev.alarm_color else {} %}
-            {% set hex_color = "#{:02x}{:02x}{:02x}".format(c.get('red',255), c.get('green',0), c.get('blue',0)) %}
+            {% set hex_color = "#{:02x}{:02x}{:02x}".format(c.get('red',255)|int, c.get('green',0)|int, c.get('blue',0)|int) %}
             <li class="list-group-item">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
                   <strong>{{ dev.name }}</strong>
-                  <span class="badge bg-secondary ms-1">{{ dev.type }}</span>
-                  <span class="badge bg-light text-dark ms-1">Kanal {{ dev.channel }}</span>
+                  <span class="badge bg-secondary ms-1">{{ dev.model or dev.type }}</span>
+                  <span class="badge bg-light text-dark border ms-1">Kanal {{ dev.channel }}</span>
                   <div class="text-muted small mt-1">
                     <i class="bi bi-hdd-network"></i> {{ dev.ip }}
-                    {% if dev.type in ['light', 'white', 'color'] %}
+                    {% if api_type in ['dimmer', 'duo', 'color', 'white', 'light'] %}
                       &nbsp;·&nbsp;<i class="bi bi-brightness-high"></i> {{ dev.alarm_brightness or 100 }}%
                     {% endif %}
-                    {% if dev.type == 'color' %}
+                    {% if api_type == 'duo' %}
+                      &nbsp;·&nbsp;<i class="bi bi-thermometer-half"></i> {{ dev.alarm_color_temp or 4000 }}K
+                    {% endif %}
+                    {% if api_type == 'color' %}
                       &nbsp;·&nbsp;
-                      <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:{{ hex_color }};vertical-align:middle;border:1px solid #ccc"></span>
+                      <span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:{{ hex_color }};vertical-align:middle;border:1px solid #bbb"></span>
                       {{ hex_color }}
-                      {% if c.get('white', 0) %}&nbsp;W:{{ c.white }}{% endif %}
+                      {% if c.get('white', 0) %}&nbsp;W:{{ c.get('white',0) }}{% endif %}
                     {% endif %}
                   </div>
                 </div>
-                <div class="d-flex gap-2">
-                  <button class="btn btn-outline-secondary btn-sm" onclick="testDevice('{{ dev.id }}', this)">
+                <div class="d-flex gap-2 flex-shrink-0">
+                  <button class="btn btn-outline-secondary btn-sm" title="Verbindung testen"
+                          onclick="testDevice('{{ dev.id }}', this)">
                     <i class="bi bi-wifi"></i>
                   </button>
-                  <button class="btn btn-outline-primary btn-sm" data-bs-toggle="collapse"
-                          data-bs-target="#edit_{{ dev.id }}">
+                  {% if api_type in ['dimmer', 'duo', 'color', 'white', 'light'] %}
+                  <button class="btn btn-outline-primary btn-sm" title="Bearbeiten"
+                          data-bs-toggle="collapse" data-bs-target="#edit_{{ dev.id }}">
                     <i class="bi bi-pencil"></i>
                   </button>
+                  {% endif %}
                   <a href="/devices/delete/{{ dev.id }}"
                      onclick="return confirm('Gerät \'{{ dev.name }}\' wirklich entfernen?')"
-                     class="btn btn-outline-danger btn-sm">
+                     class="btn btn-outline-danger btn-sm" title="Entfernen">
                     <i class="bi bi-trash"></i>
                   </a>
                 </div>
               </div>
 
-              <!-- Inline-Edit (nur bei Licht/Farb-Typen) -->
-              {% if dev.type in ['light', 'white', 'color'] %}
+              <!-- Inline-Editor -->
+              {% if api_type in ['dimmer', 'duo', 'color', 'white', 'light'] %}
               <div class="collapse mt-3" id="edit_{{ dev.id }}">
-                <form method="post" action="/devices/edit/{{ dev.id }}" class="bg-light p-3 rounded">
-                  <div class="row g-2 align-items-end">
+                <form method="post" action="/devices/edit/{{ dev.id }}" class="bg-light rounded p-3">
+                  <div class="row g-3 align-items-end">
                     <div class="col-12">
-                      <label class="form-label small fw-semibold mb-1">Helligkeit bei Einsatz (%)</label>
-                      <input type="range" class="form-range" name="alarm_brightness"
-                             min="1" max="100" value="{{ dev.alarm_brightness or 100 }}"
-                             oninput="this.nextElementSibling.textContent = this.value + '%'">
-                      <span class="text-muted small">{{ dev.alarm_brightness or 100 }}%</span>
+                      <label class="form-label small fw-semibold mb-1">Helligkeit (%)</label>
+                      <div class="d-flex align-items-center gap-3">
+                        <input type="range" class="form-range" name="alarm_brightness"
+                               min="1" max="100" value="{{ dev.alarm_brightness or 100 }}"
+                               oninput="this.nextElementSibling.textContent=this.value+'%'">
+                        <span class="text-muted small" style="min-width:40px">{{ dev.alarm_brightness or 100 }}%</span>
+                      </div>
                     </div>
-                    {% if dev.type == 'color' %}
-                    <div class="col-sm-6">
-                      <label class="form-label small fw-semibold mb-1">Farbe</label>
+                    {% if api_type == 'duo' %}
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold mb-1">Farbtemperatur (K)</label>
+                      <div class="d-flex align-items-center gap-3">
+                        <input type="range" class="form-range" name="alarm_color_temp"
+                               min="3000" max="6500" step="100" value="{{ dev.alarm_color_temp or 4000 }}"
+                               oninput="this.nextElementSibling.textContent=this.value+'K'">
+                        <span class="text-muted small" style="min-width:50px">{{ dev.alarm_color_temp or 4000 }}K</span>
+                      </div>
+                      <div class="d-flex justify-content-between form-text"><span>🟡 3000K</span><span>⚪ 6500K</span></div>
+                    </div>
+                    <input type="hidden" name="alarm_color_hex" value="{{ hex_color }}">
+                    <input type="hidden" name="alarm_white" value="0">
+                    {% elif api_type == 'color' %}
+                    <div class="col-sm-5">
+                      <label class="form-label small fw-semibold mb-1">Farbe (RGB)</label>
                       <input type="color" class="form-control form-control-color w-100"
                              name="alarm_color_hex" value="{{ hex_color }}">
                     </div>
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
                       <label class="form-label small fw-semibold mb-1">Warmweiß (0–255)</label>
                       <input type="number" class="form-control form-control-sm"
                              name="alarm_white" min="0" max="255" value="{{ c.get('white', 0) }}">
                     </div>
+                    <input type="hidden" name="alarm_color_temp" value="4000">
                     {% else %}
                     <input type="hidden" name="alarm_color_hex" value="{{ hex_color }}">
-                    <input type="hidden" name="alarm_white" value="{{ c.get('white', 0) }}">
+                    <input type="hidden" name="alarm_white" value="0">
+                    <input type="hidden" name="alarm_color_temp" value="4000">
                     {% endif %}
                     <div class="col-12">
                       <button type="submit" class="btn btn-primary btn-sm w-100">
@@ -169,13 +236,27 @@
 
 {% block scripts %}
 <script>
-function updateFields(prefix) {
-  const type = document.getElementById(prefix + 'Type').value;
-  const showBrightness = ['light', 'white', 'color'].includes(type);
-  const showColor = type === 'color';
-  document.getElementById(prefix + '-brightness').style.display = showBrightness ? '' : 'none';
-  document.getElementById(prefix + '-color').style.display = showColor ? '' : 'none';
-  document.getElementById(prefix + '-white').style.display = showColor ? '' : 'none';
+function onModelChange(prefix) {
+  const model = document.getElementById(prefix + 'Model').value;
+  const m = MODELS[model] || { type: 'relay', channels: 1 };
+
+  // Kanäle aktualisieren
+  const chSel = document.getElementById(prefix + 'Channel');
+  chSel.innerHTML = '';
+  for (let i = 0; i < m.channels; i++) {
+    chSel.innerHTML += `<option value="${i}">Kanal ${i}</option>`;
+  }
+  const chWrap = document.getElementById(prefix + '-channel-wrap');
+  if (chWrap) chWrap.style.display = m.channels > 1 ? '' : 'none';
+
+  // Felder ein-/ausblenden
+  const show = (id, visible) => {
+    const el = document.getElementById(prefix + '-' + id);
+    if (el) el.style.display = visible ? '' : 'none';
+  };
+  show('brightness', ['dimmer', 'duo', 'color', 'white'].includes(m.type));
+  show('kelvin',     m.type === 'duo');
+  show('color',      m.type === 'color');
 }
 
 function testDevice(id, btn) {
@@ -187,11 +268,13 @@ function testDevice(id, btn) {
     .then(d => {
       if (d.ok) {
         const s = d.status;
-        let info = s.ison !== undefined ? (s.ison ? 'AN' : 'AUS') : '';
-        if (s.brightness !== undefined) info += ` · ${s.brightness}%`;
-        if (s.gain !== undefined) info += ` · Gain ${s.gain}%`;
-        if (s.red !== undefined) info += ` · RGB(${s.red},${s.green},${s.blue})`;
-        out.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Erreichbar — ${info}</span>`;
+        const parts = [];
+        if (s.ison !== undefined) parts.push(s.ison ? '<span class="text-success">AN</span>' : '<span class="text-secondary">AUS</span>');
+        if (s.brightness !== undefined) parts.push(`${s.brightness}%`);
+        if (s.kelvin !== undefined) parts.push(`${s.kelvin}K`);
+        if (s.gain !== undefined) parts.push(`Gain ${s.gain}%`);
+        if (s.red !== undefined) parts.push(`RGB(${s.red},${s.green},${s.blue})`);
+        out.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Erreichbar</span> · ${parts.join(' · ')}`;
       } else {
         out.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${d.error}</span>`;
       }
@@ -199,5 +282,8 @@ function testDevice(id, btn) {
       btn.innerHTML = '<i class="bi bi-wifi"></i>';
     });
 }
+
+// Initiale Anzeige beim Laden
+onModelChange('add');
 </script>
 {% endblock %}
