@@ -7,6 +7,7 @@ Verbindet **Divera 247** (Einsatzleitsystem für Feuerwehr & Rettungsdienste) mi
 ## Features
 
 - Automatisches Polling der Divera 247 API auf neue Einsätze
+- Unterstützung von **Organisations-Key** und **persönlichem Account-Key**
 - Weboberfläche zur Verwaltung von Shelly-Geräten (Hinzufügen, Testen, Löschen, Bearbeiten)
 - Auswahl welche Geräte bei einem Einsatz gesteuert werden
 - **Zustandsspeicherung**: Vor dem Einsatz wird Farbe, Helligkeit und Farbtemperatur jedes Geräts gespeichert und danach wiederhergestellt
@@ -40,7 +41,7 @@ Verbindet **Divera 247** (Einsatzleitsystem für Feuerwehr & Rettungsdienste) mi
   - Bei der Installation **"Add Python to PATH"** ankreuzen!
 - Git → [git-scm.com](https://git-scm.com/) (für die Update-Funktion)
 - Shelly-Gerät im gleichen lokalen Netzwerk
-- Divera 247 API-Zugangscode
+- Divera 247 API-Zugangscode (Organisations- oder persönlicher Key)
 
 ## Installation & Start
 
@@ -76,15 +77,6 @@ sudo systemctl restart divera-shelly   # Neustart
 sudo journalctl -u divera-shelly -f    # Live-Log
 ```
 
-### Windows
-
-```bat
-git clone https://github.com/drunkler/Divera247-SmartHome.git
-cd Divera247-SmartHome
-```
-
-Dann `start.bat` doppelklicken — richtet automatisch eine virtuelle Python-Umgebung ein, installiert alle Abhängigkeiten und öffnet `http://localhost:5000` im Browser.
-
 ### Manuell (alle Plattformen)
 
 ```bash
@@ -111,14 +103,17 @@ Beim ersten Start wird automatisch ein Standard-Login angelegt:
 
 ### Einrichtung
 
-1. **Divera API-Key eintragen**: Einstellungen → Access-Key  
-   *(In Divera 247: **Verwaltung → Einstellungen → Schnittstellen → API** — dies ist der Organisations-Key, nicht der persönliche Account-Key)*
+1. **Key-Typ wählen**: Einstellungen → Key-Typ
+   - **Organisations-Key**: aus *Divera → Verwaltung → Einstellungen → Schnittstellen → API*
+   - **Persönlicher Key**: aus *Divera → Mein Konto → Einstellungen → API*
 
-2. **Shelly-Geräte hinzufügen**: Geräte → Modell, IP-Adresse, Kanal und gewünschte Alarm-Einstellungen (Farbe, Helligkeit, Farbtemperatur) eintragen
+2. **API-Key eintragen**: Einstellungen → Access-Key
 
-3. **Lichter auswählen**: Im Dashboard Häkchen bei den Geräten setzen, die bei einem Einsatz gesteuert werden sollen
+3. **Shelly-Geräte hinzufügen**: Geräte → Modell, IP-Adresse, Kanal und gewünschte Alarm-Einstellungen (Farbe, Helligkeit, Farbtemperatur) eintragen
 
-4. **Optional — Auto-Off**: In den Einstellungen eine Zeit in Sekunden eintragen, nach der der Originalzustand wiederhergestellt wird (`0` = dauerhaft an)
+4. **Lichter auswählen**: Im Dashboard Häkchen bei den Geräten setzen, die bei einem Einsatz gesteuert werden sollen
+
+5. **Optional — Auto-Off**: In den Einstellungen eine Zeit in Sekunden eintragen, nach der der Originalzustand wiederhergestellt wird (`0` = dauerhaft an)
 
 ### Zustandswiederherstellung
 
@@ -147,23 +142,6 @@ Unter **Einstellungen → Software-Update** kann direkt in der Oberfläche nach 
 ├── start.bat       # Windows-Starter mit Auto-Setup
 └── requirements.txt
 ```
-
-## Interne API-Endpunkte
-
-| Endpunkt | Beschreibung |
-|---|---|
-| `GET /` | Dashboard |
-| `GET /devices` | Geräteverwaltung |
-| `GET /settings` | Einstellungen |
-| `GET /login` · `GET /logout` | Authentifizierung |
-| `GET /lights/on` | Alle ausgewählten Lichter einschalten |
-| `GET /lights/off` | Alle Lichter ausschalten |
-| `POST /lights/select` | Lichtauswahl speichern |
-| `GET /api/state` | Aktueller Status als JSON |
-| `GET /devices/test/<id>` | Einzelnes Gerät testen |
-| `POST /devices/edit/<id>` | Gerät bearbeiten |
-| `GET /update/check` | Auf neue Version prüfen |
-| `POST /update/apply` | Update einspielen + Neustart |
 
 ## Lizenz
 
