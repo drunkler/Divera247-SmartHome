@@ -1,5 +1,5 @@
 @echo off
-echo Divera -> Smarthome wird gestartet...
+echo Divera -> Smart Home wird gestartet...
 cd /d "%~dp0"
 
 :: Python suchen (verschiedene Installationswege)

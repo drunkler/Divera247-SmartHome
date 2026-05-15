@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(mes
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = "divera-smarthome-secret-2024"
+app.secret_key = "divera-smart-home-secret-2024"
 
 
 def login_required(f):
