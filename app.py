@@ -26,40 +26,82 @@ state = {
 }
 _off_timer = None
 _scheduler = None
+# IDs der Lichter, die durch den Einsatz eingeschaltet wurden (vorher aus)
+_turned_on_by_alarm: list = []
 
 
 def _trigger_lights(alarm, cfg):
-    global _off_timer
+    global _off_timer, _turned_on_by_alarm
     selected = cfg.get("selected_lights", [])
     if not selected:
         log.warning("Einsatz erkannt, aber keine Lichter konfiguriert.")
         return
 
     devices = {d["id"]: d for d in cfg.get("shelly_devices", [])}
+    turned_on_now = []
+
     for dev_id in selected:
         dev = devices.get(dev_id)
         if not dev:
             continue
+        # Vorherigen Zustand prüfen
+        was_on = False
+        try:
+            status = shelly.get_status(dev)
+            was_on = bool(status.get("ison", False))
+        except Exception:
+            pass  # Bei Fehler gehen wir davon aus, dass es aus war
+
         try:
             shelly.turn_on(dev)
             log.info("Licht AN: %s (%s)", dev["name"], dev["ip"])
+            if not was_on:
+                turned_on_now.append(dev_id)
+                log.info("  -> war vorher AUS, wird für Auto-Off vorgemerkt")
+            else:
+                log.info("  -> war bereits AN, bleibt nach Einsatz an")
         except Exception as e:
             log.error("Fehler beim Einschalten von %s: %s", dev["name"], e)
 
+    _turned_on_by_alarm = turned_on_now
     state["lights_on"] = True
     state["lights_on_since"] = datetime.now().strftime("%H:%M:%S")
 
     auto_off = cfg.get("auto_off_seconds", 0)
-    if auto_off and auto_off > 0:
+    if auto_off and auto_off > 0 and turned_on_now:
         if _off_timer:
             _off_timer.cancel()
-        _off_timer = threading.Timer(auto_off, _turn_off_all_lights)
+        _off_timer = threading.Timer(auto_off, _turn_off_alarm_lights)
         _off_timer.daemon = True
         _off_timer.start()
-        log.info("Lichter werden in %d Sekunden automatisch ausgeschaltet.", auto_off)
+        log.info("Auto-Off in %ds für %d Licht(er) die vorher aus waren.", auto_off, len(turned_on_now))
+
+
+def _turn_off_alarm_lights():
+    """Schaltet nur die Lichter aus, die durch den Einsatz eingeschaltet wurden."""
+    global _turned_on_by_alarm
+    cfg = cfg_module.load()
+    devices = {d["id"]: d for d in cfg.get("shelly_devices", [])}
+    for dev_id in _turned_on_by_alarm:
+        dev = devices.get(dev_id)
+        if not dev:
+            continue
+        try:
+            shelly.turn_off(dev)
+            log.info("Licht AUS (auto): %s", dev["name"])
+        except Exception as e:
+            log.error("Fehler beim Ausschalten von %s: %s", dev["name"], e)
+    _turned_on_by_alarm = []
+    state["lights_on"] = False
 
 
 def _turn_off_all_lights():
+    """Manuelles Ausschalten aller ausgewählten Lichter."""
+    global _turned_on_by_alarm, _off_timer
+    if _off_timer:
+        _off_timer.cancel()
+        _off_timer = None
+    _turned_on_by_alarm = []
     cfg = cfg_module.load()
     devices = {d["id"]: d for d in cfg.get("shelly_devices", [])}
     for dev_id in cfg.get("selected_lights", []):
@@ -68,7 +110,7 @@ def _turn_off_all_lights():
             continue
         try:
             shelly.turn_off(dev)
-            log.info("Licht AUS (auto): %s", dev["name"])
+            log.info("Licht AUS (manuell): %s", dev["name"])
         except Exception as e:
             log.error("Fehler beim Ausschalten von %s: %s", dev["name"], e)
     state["lights_on"] = False
